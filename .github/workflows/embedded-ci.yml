@@ -1,0 +1,80 @@
+name: Embedded CI
+
+on:
+  push:
+    paths:
+      - 'esp8266_master/**'
+      - 'slave_node/**'
+    branches: [ main, master ]
+  pull_request:
+    paths:
+      - 'esp8266_master/**'
+      - 'slave_node/**'
+  workflow_dispatch:
+
+jobs:
+  # ESP8266 编译
+  esp8266:
+    runs-on: ubuntu-latest
+    container: espressif/idf
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 安装 PlatformIO
+      run: |
+        pip install platformio
+        pio pkg install --project esp8266_master
+        
+    - name: 编译 ESP8266
+      working-directory: esp8266_master
+      run: |
+        pio run
+        
+    - name: 上传固件
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp8266-firmware
+        path: esp8266_master/.pio/build/nodemcuv2/firmware.bin
+
+  # STC32G 编译
+  stc32g:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 安装 SDCC
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sdcc
+        
+    - name: 编译 STC32G
+      working-directory: slave_node
+      run: |
+        make
+        
+    - name: 上传 HEX 文件
+      uses: actions/upload-artifact@v4
+      with:
+        name: stc32g-hex
+        path: slave_node/build/main.hex
+
+  # 代码检查
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 检查 C/C++ 代码
+      run: |
+        sudo apt-get install -y cppcheck
+        cppcheck --enable=all --inconclusive --error-exitcode=1 \
+          esp8266_master/src/ \
+          slave_node/src/ \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction
