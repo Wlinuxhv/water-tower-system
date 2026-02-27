@@ -1,0 +1,65 @@
+name: Android CI
+
+on:
+  push:
+    paths:
+      - 'water_tower_system/android_app/**'
+    branches: [ main, master ]
+  pull_request:
+    paths:
+      - 'water_tower_system/android_app/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+      
+    - name: 授予 Gradle 权限
+      run: chmod +x water_tower_system/android_app/gradlew
+      
+    - name: 使用 Gradle 构建
+      working-directory: water_tower_system/android_app
+      run: |
+        ./gradlew clean
+        ./gradlew assembleRelease
+        
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-apk
+        path: water_tower_system/android_app/app/build/outputs/apk/release/*.apk
+        
+    - name: 创建 Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: water_tower_system/android_app/app/build/outputs/apk/release/*.apk
+        body: |
+          ## 📱 水塔监控系统 Android APP
+          
+          ### 更新内容
+          - 实时水位监控
+          - 水泵远程控制
+          - 自动/手动模式切换
+          - 缺水报警通知
+          - 历史记录查询
+          
+          ### 安装说明
+          1. 下载 APK 文件
+          2. 在 Android 设备上允许"未知来源"安装
+          3. 安装并运行
+          
+          ### 连接配置
+          - 默认 IP: 192.168.4.1 (ESP8266 AP 模式)
+          - 或在设置中自定义 IP 地址

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">水塔监控</string>
+    <string name="settings">设置</string>
+    <string name="history">历史记录</string>
+    <string name="refresh">刷新</string>
+    <string name="auto_mode">自动模式</string>
+    <string name="manual_mode">手动模式</string>
+    <string name="pump_control">水泵控制</string>
+    <string name="water_level">水位</string>
+    <string name="status">状态</string>
+    <string name="online">在线</string>
+    <string name="offline">离线</string>
+    <string name="alarm">报警</string>
+    <string name="low_water">缺水</string>
+    <string name="overflow">溢水</string>
+    <string name="pump_on">水泵运行</string>
+    <string name="pump_off">水泵停止</string>
+    <string name="confirm">确认</string>
+    <string name="cancel">取消</string>
+    <string name="server_address">服务器地址</string>
+    <string name="save">保存</string>
+    <string name="test_connection">测试连接</string>
+    <string name="connection_success">连接成功</string>
+    <string name="connection_failed">连接失败</string>
+    <string name="last_update">最后更新</string>
+    <string name="tower">水塔</string>
+    <string name="all_towers">全部水塔</string>
+    <string name="system_status">系统状态</string>
+    <string name="well_water">井水状态</string>
+    <string name="well_water_ok">井水充足</string>
+    <string name="well_water_low">井水不足</string>
+</resources>
