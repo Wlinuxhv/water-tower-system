@@ -3,7 +3,6 @@ package com.watertower.monitor
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -144,7 +143,7 @@ class MainActivity : AppCompatActivity() {
     private fun toggleMode() {
         lifecycleScope.launch {
             try {
-                val newMode = ApiClient.api.setMode(mapOf("autoMode" to true))
+                ApiClient.api.setMode(mapOf("autoMode" to true))
                 Toast.makeText(this@MainActivity, "模式已切换", Toast.LENGTH_SHORT).show()
                 refreshData()
             } catch (e: Exception) {

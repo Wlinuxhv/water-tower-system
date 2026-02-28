@@ -5,7 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.watertower.monitor.databinding.ItemTowerBinding
+import com.watertower.monitor.databinding.TowerItemBinding
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -14,7 +14,7 @@ class TowerAdapter : ListAdapter<TowerData, TowerAdapter.TowerViewHolder>(TowerD
     var onPumpClick: ((TowerData) -> Unit)? = null
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TowerViewHolder {
-        val binding = ItemTowerBinding.inflate(
+        val binding = TowerItemBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
@@ -27,7 +27,7 @@ class TowerAdapter : ListAdapter<TowerData, TowerAdapter.TowerViewHolder>(TowerD
     }
     
     inner class TowerViewHolder(
-        private val binding: ItemTowerBinding
+        private val binding: TowerItemBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         
         fun bind(tower: TowerData) {
@@ -37,28 +37,22 @@ class TowerAdapter : ListAdapter<TowerData, TowerAdapter.TowerViewHolder>(TowerD
             
             // 在线状态
             if (tower.online) {
-                binding.textStatus.text = "在线"
-                binding textStatus.setTextColor(
-                    binding.root.context.getColor(R.color.online_green)
+                binding.textStatus.text = "● 在线"
+                binding.textStatus.setTextColor(
+                    binding.root.context.getColor(R.color.success)
                 )
             } else {
-                binding.textStatus.text = "离线"
+                binding.textStatus.text = "○ 离线"
                 binding.textStatus.setTextColor(
-                    binding.root.context.getColor(R.color.offline_red)
+                    binding.root.context.getColor(R.color.error)
                 )
             }
             
             // 水泵状态
             if (tower.pumpOn) {
                 binding.btnPump.text = "停止水泵"
-                binding.btnPump.setBackgroundColor(
-                    binding.root.context.getColor(R.color.pump_on_red)
-                )
             } else {
                 binding.btnPump.text = "开启水泵"
-                binding.btnPump.setBackgroundColor(
-                    binding.root.context.getColor(R.color.pump_off_green)
-                )
             }
             
             // 报警状态

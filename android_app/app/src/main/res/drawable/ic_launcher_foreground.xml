@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- 水滴形状 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20
+                          C54,20 38,42 38,54
+                          C38,65.046 46.954,74 58,74
+                          C69.046,74 78,65.046 78,54
+                          C78,42 62,20 62,20
+                          C60.5,18.5 55.5,18.5 54,20
+                          Z"/>
+    
+    <!-- 高光 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.3"
+        android:pathData="M50,35
+                          C50,35 45,45 45,52
+                          C45,55 47,57 50,57
+                          C53,57 55,55 55,52
+                          C55,48 52,40 52,38
+                          C52,37 51,36 50,35
+                          Z"/>
+</vector>
