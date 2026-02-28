@@ -15,7 +15,8 @@ OUT_DIR = output
 
 # 源文件
 SRCS = $(SRC_DIR)/main.c \
-       $(SRC_DIR)/pan3031.c
+       $(SRC_DIR)/pan3031.c \
+       $(SRC_DIR)/sc09b.c
 
 # 头文件
 INCS = -I$(INC_DIR)

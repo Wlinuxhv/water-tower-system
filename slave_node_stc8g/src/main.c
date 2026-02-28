@@ -21,6 +21,7 @@
 
 #include <STC8G1K08.h>
 #include "pan3031.h"
+#include "sc09b.h"
 #include "slave_config.h"
 
 // ==================== 引脚定义 ====================
@@ -51,6 +52,10 @@ volatile bit g_well_water_ok = 1;
 volatile uint32_t g_last_send = 0;
 volatile uint16_t g_timer_count = 0;
 
+// SC09B 传感器
+volatile uint16_t g_sc09b_data = 0;
+volatile bit g_sc09b_ready = 0;
+
 // ==================== 函数声明 ====================
 void system_init(void);
 void adc_init(void);
@@ -70,8 +75,16 @@ void main(void) {
     send_heartbeat();
     
     while (1) {
-        // 读取传感器
-        g_water_level = read_water_level();
+        // 读取 SC09B 水位传感器
+        if (g_sc09b_ready) {
+            g_sc09b_data = sc09b_read_water_level();
+            g_water_level = sc09b_get_water_percent();
+        } else {
+            // 传感器故障，使用默认值
+            g_water_level = 0;
+        }
+        
+        // 检查缺水
         g_well_water_ok = check_well_water();
         
         // 处理接收到的命令
@@ -109,8 +122,18 @@ void system_init(void) {
     pan3031_set_bw(PAN3031_BW);
     pan3031_set_power(PAN3031_PWR);
     
-    // ADC 初始化
-    adc_init();
+    // SC09B 水位传感器初始化
+    if (sc09b_init() == 0) {
+        g_sc09b_ready = 1;
+    } else {
+        g_sc09b_ready = 0;
+    }
+    
+    // 读取初始水位
+    if (g_sc09b_ready) {
+        g_sc09b_data = sc09b_read_water_level();
+        g_water_level = sc09b_get_water_percent();
+    }
     
     // 定时器 0 初始化 (用于计时)
     timer0_init();
