@@ -21,8 +21,30 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
       
-    - name: 使用 Gradle 编译
-      uses: gradle/gradle-build-action@v3
+    - name: 下载并安装 Gradle 8.0
+      run: |
+        cd /tmp
+        echo "下载 Gradle 8.0..."
+        wget -q --show-progress https://services.gradle.org/distributions/gradle-8.0-bin.zip
+        echo "解压 Gradle..."
+        unzip -q gradle-8.0-bin.zip
+        echo "设置 PATH..."
+        echo "/tmp/gradle-8.0/bin" >> $GITHUB_PATH
+        gradle --version
+        
+    - name: 生成 Gradle Wrapper 并编译
+      working-directory: android_app
+      run: |
+        echo "生成 Gradle Wrapper..."
+        gradle wrapper --gradle-version 8.0
+        echo "编译 Debug APK..."
+        chmod +x gradlew
+        ./gradlew assembleDebug --no-daemon --stacktrace
+        echo "编译完成！"
+        ls -la app/build/outputs/apk/debug/
+        
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
       with:
-        arguments: assembleDebug
-        build-root-directory: android_app
+        name: water-tower-monitor-debug
+        path: android_app/app/build/outputs/apk/debug/*.apk
