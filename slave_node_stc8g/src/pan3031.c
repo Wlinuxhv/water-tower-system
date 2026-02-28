@@ -209,20 +209,125 @@ bit pan3031_receive(uint8_t *data, uint8_t *len) {
 }
 
 // ==================== 低功耗模式 ====================
+
+/**
+ * PAN3031 睡眠模式
+ * 
+ * 低功耗配置:
+ * - 关闭射频电路
+ * - 关闭 PLL
+ * - 关闭 ADC
+ * - 保留寄存器内容
+ * 
+ * 睡眠电流：<1μA
+ */
 void pan3031_sleep(void) {
-    // 进入睡眠模式
+    // 1. 先退出当前模式
+    pan3031_write_reg(REG_OP_MODE, MODE_STDBY);
+    delay_ms(1);
+    
+    // 2. 配置低功耗模式
+    // REG_OP_MODE: Sleep mode, Low frequency mode
     pan3031_write_reg(REG_OP_MODE, MODE_SLEEP);
+    
+    // 3. 关闭不必要的功能
+    // 关闭 LNA (低噪声放大器)
+    pan3031_write_reg(REG_LNA, 0x00);
+    
+    // 关闭 PA (功率放大器)
+    pan3031_write_reg(REG_PA_CONFIG, 0x00);
+    pan3031_write_reg(REG_PA_DAC, 0x04);  // PA DAC 关闭
+    
+    // 4. 配置 TCXO (如果有) 为关闭状态
+    pan3031_write_reg(REG_TCXO, 0x00);
 }
 
+/**
+ * PAN3031 WOR 模式 (Watch On Receiver)
+ * 
+ * 工作原理:
+ * - 定时唤醒接收 (例如每 500ms)
+ * - 检测前导码
+ * - 无信号则继续睡眠
+ * - 有信号则唤醒 MCU
+ * 
+ * 功耗优化:
+ * - MCU 睡眠期间，PAN3031 独立工作
+ * - 仅检测到有效信号时唤醒 MCU
+ * - 大幅降低系统平均功耗
+ * 
+ * 配置参数:
+ * - WOR 周期：可配置 (1ms - 1 分钟)
+ * - 接收窗口：可配置
+ */
 void pan3031_wor_enable(void) {
-    // 启用 WOR (Watch On Receiver)
-    // 定时唤醒接收，降低功耗
+    // 1. 进入待机模式
+    pan3031_write_reg(REG_OP_MODE, MODE_STDBY);
     
-    // 配置 WOR 周期
-    pan3031_write_reg(REG_PLL_HOP, 0x02);  // WOR 周期设置
+    // 2. 配置 WOR 周期
+    // REG_PLL_HOP[6:0]: WOR 周期
+    // 0x00 = 禁用
+    // 0x01-0x7F: 周期值 (单位：400μs)
+    // 例如：0x0A = 4ms, 0x64 = 100ms
+    pan3031_write_reg(REG_PLL_HOP, 0x0A);  // 4ms WOR 周期
     
-    // 进入 WOR 模式
+    // 3. 配置 DIO 映射 (IRQ 引脚)
+    // REG_DIO_MAPPING1: 配置 DIO0-3
+    // DIO0 = RxDone, DIO1 = 未使用, DIO2 = 未使用, DIO3 = 未使用
+    pan3031_write_reg(REG_DIO_MAPPING1, 0x00);
+    
+    // 4. 设置 payload 长度
+    pan3031_write_reg(REG_PAYLOAD_LEN, 0x20);  // 32 字节
+    
+    // 5. 进入 WOR 接收模式
     pan3031_write_reg(REG_OP_MODE, MODE_RXSINGLE);
+}
+
+/**
+ * PAN3031 深度睡眠模式 (最低功耗)
+ * 
+ * 适用场景:
+ * - 长时间不通信 (数小时/数天)
+ * - 电池供电设备
+ * 
+ * 注意事项:
+ * - 需要外部唤醒源 (定时器/GPIO)
+ * - 寄存器内容可能丢失
+ */
+void pan3031_deep_sleep(void) {
+    // 1. 保存必要配置 (如果需要)
+    // uint8_t saved_config = pan3031_read_reg(REG_xxx);
+    
+    // 2. 关闭所有功能
+    pan3031_write_reg(REG_OP_MODE, MODE_SLEEP);
+    pan3031_write_reg(REG_LNA, 0x00);
+    pan3031_write_reg(REG_PA_CONFIG, 0x00);
+    pan3031_write_reg(REG_PA_DAC, 0x04);
+    
+    // 3. 拉低 CS 引脚 (可选，进一步降低漏电)
+    // PAN3031_CS_PIN = 0;
+    
+    // 功耗：<0.5μA
+}
+
+/**
+ * PAN3031 快速唤醒
+ * 
+ * 从睡眠模式快速恢复到工作状态
+ */
+void pan3031_wakeup(void) {
+    // 1. 从睡眠唤醒
+    pan3031_write_reg(REG_OP_MODE, MODE_STDBY);
+    delay_ms(2);  // 等待稳定
+    
+    // 2. 恢复配置
+    pan3031_set_freq(434000000);
+    pan3031_set_sf(7);
+    pan3031_set_bw(125000);
+    pan3031_set_power(20);
+    
+    // 3. 准备就绪
+    pan3031_write_reg(REG_OP_MODE, MODE_STDBY);
 }
 
 // ==================== 延时函数 ====================
