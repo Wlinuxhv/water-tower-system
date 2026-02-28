@@ -49,6 +49,14 @@
                 style="@style/Widget.Material3.Button.OutlinedButton" />
 
             <ImageButton
+                android:id="@+id/btnDemoMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_menu_info_details"
+                android:contentDescription="演示模式"
+                style="@style/Widget.Material3.Button.IconButton" />
+
+            <ImageButton
                 android:id="@+id/btnRefresh"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -57,6 +65,19 @@
                 style="@style/Widget.Material3.Button.IconButton" />
 
         </LinearLayout>
+
+        <!-- 演示模式提示 -->
+        <TextView
+            android:id="@+id/textDemoBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎭 演示模式 - 显示模拟数据"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="#FFF3E0"
+            android:visibility="gone" />
 
         <!-- 水塔列表 -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout

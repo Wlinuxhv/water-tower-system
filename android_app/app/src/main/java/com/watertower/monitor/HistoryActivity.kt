@@ -3,6 +3,7 @@ package com.watertower.monitor
 import android.app.DatePickerDialog
 import android.graphics.Color
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.github.mikephil.charting.charts.LineChart
@@ -76,19 +77,29 @@ class HistoryActivity : AppCompatActivity() {
                 val hours = ((now.timeInMillis - selectedDate.timeInMillis) / (1000 * 60 * 60)).toInt() + 1
                 
                 val history = withContext(Dispatchers.IO) {
-                    ApiClient.api.getHistory(towerId = selectedTowerId, hours = hours)
+                    if (ApiClient.demoMode) {
+                        // 演示模式：使用模拟数据
+                        ApiClient.getDemoHistory(selectedTowerId, hours.coerceAtLeast(24))
+                    } else {
+                        // 正常模式：从 API 获取
+                        ApiClient.api.getHistory(towerId = selectedTowerId, hours = hours)
+                    }
                 }
                 
                 withContext(Dispatchers.Main) {
                     updateDateDisplay()
                     displayChart(history)
                     displayStatistics(history)
+                    
+                    if (ApiClient.demoMode) {
+                        Toast.makeText(this@HistoryActivity, "🎭 演示数据", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    binding.textSelectedDate.text = "加载失败：${e.message}"
-                    // 显示模拟数据用于演示
+                    // 直接显示演示数据
                     displayMockData()
+                    Toast.makeText(this@HistoryActivity, "显示演示数据", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -114,7 +125,7 @@ class HistoryActivity : AppCompatActivity() {
             lineWidth = 2f
             setDrawCircles(true)
             setDrawCircleHole(true)
-            circleColor = Color.parseColor("#2196F3")
+            setCircleColor(Color.parseColor("#2196F3"))
             circleRadius = 4f
             setDrawFilled(true)
             fillColor = Color.parseColor("#64B5F6")

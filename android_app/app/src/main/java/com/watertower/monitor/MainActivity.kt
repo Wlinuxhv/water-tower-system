@@ -37,6 +37,11 @@ class MainActivity : AppCompatActivity() {
             toggleMode()
         }
         
+        // 演示模式按钮
+        binding.btnDemoMode.setOnClickListener {
+            toggleDemoMode()
+        }
+        
         // 刷新按钮
         binding.btnRefresh.setOnClickListener {
             refreshData()
@@ -46,6 +51,10 @@ class MainActivity : AppCompatActivity() {
         towerAdapter.onPumpClick = { tower ->
             showPumpControlDialog(tower)
         }
+        
+        // 默认开启演示模式（方便演示）
+        ApiClient.demoMode = true
+        updateDemoBanner()
         
         // 开始自动刷新
         startAutoRefresh()
@@ -108,22 +117,43 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val towers = withContext(Dispatchers.IO) {
-                    ApiClient.api.getAllTowers()
+                    if (ApiClient.demoMode) {
+                        // 演示模式：使用模拟数据
+                        ApiClient.getDemoTowers()
+                    } else {
+                        // 正常模式：从 API 获取
+                        ApiClient.api.getAllTowers()
+                    }
                 }
                 
                 withContext(Dispatchers.Main) {
                     towerAdapter.submitList(towers)
                     updateStatus(towers)
                     binding.swipeRefresh.isRefreshing = false
+                    
+                    if (ApiClient.demoMode) {
+                        Toast.makeText(this@MainActivity, "🎭 演示模式", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     binding.swipeRefresh.isRefreshing = false
-                    Toast.makeText(
-                        this@MainActivity,
-                        "连接失败：${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // 连接失败时自动切换到演示模式
+                    if (!ApiClient.demoMode) {
+                        ApiClient.demoMode = true
+                        Toast.makeText(
+                            this@MainActivity,
+                            "连接失败，已切换到演示模式",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        refreshData() // 重新加载演示数据
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "连接失败：${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -149,6 +179,25 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "切换失败", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    
+    private fun toggleDemoMode() {
+        ApiClient.demoMode = !ApiClient.demoMode
+        updateDemoBanner()
+        Toast.makeText(
+            this,
+            if (ApiClient.demoMode) "🎭 已开启演示模式" else "🔌 已切换到真实模式",
+            Toast.LENGTH_SHORT
+        ).show()
+        refreshData()
+    }
+    
+    private fun updateDemoBanner() {
+        binding.textDemoBanner.visibility = if (ApiClient.demoMode) {
+            android.view.View.VISIBLE
+        } else {
+            android.view.View.GONE
         }
     }
     
