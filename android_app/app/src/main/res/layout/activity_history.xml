@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- 日期选择 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btnSelectDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="选择日期"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <TextView
+            android:id="@+id/textSelectedDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="今天"
+            android:textSize="16sp"
+            android:layout_gravity="center_vertical" />
+
+    </LinearLayout>
+
+    <!-- 水位图表 -->
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/chartWaterLevel"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_margin="16dp" />
+
+    <!-- 统计信息 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="统计信息"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="最高水位："
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/textMaxLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="95%"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="最低水位："
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/textMinLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="15%"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="平均水位："
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/textAvgLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="55%"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </GridLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
