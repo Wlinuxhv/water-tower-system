@@ -5,12 +5,7 @@ on:
     paths:
       - 'android_app/**'
     branches: [ main, master ]
-  pull_request:
-    paths:
-      - 'android_app/**'
   workflow_dispatch:
-  release:
-    types: [created]
 
 jobs:
   build:
@@ -26,45 +21,8 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
       
-    - name: 下载 Gradle 8.0
-      run: |
-        cd android_app
-        wget https://services.gradle.org/distributions/gradle-8.0-bin.zip
-        unzip -q gradle-8.0-bin.zip
-        export PATH=$PWD/gradle-8.0/bin:$PATH
-        
-    - name: 生成 Gradle Wrapper
-      working-directory: android_app
-      run: |
-        gradle-8.0/bin/gradle wrapper --gradle-version 8.0
-        
-    - name: 编译 Debug APK
-      working-directory: android_app
-      run: |
-        chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
-        
-    - name: 编译 Release APK
-      working-directory: android_app
-      run: |
-        ./gradlew assembleRelease --no-daemon --stacktrace
-        
-    - name: 上传 Debug APK
-      uses: actions/upload-artifact@v4
+    - name: 使用 Gradle 编译
+      uses: gradle/gradle-build-action@v3
       with:
-        name: water-tower-monitor-debug
-        path: android_app/app/build/outputs/apk/debug/*.apk
-        
-    - name: 上传 Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: water-tower-monitor-release
-        path: android_app/app/build/outputs/apk/release/*.apk
-        
-    - name: 上传 APK 到 Release
-      if: github.event_name == 'release'
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          android_app/app/build/outputs/apk/release/*.apk
-          android_app/app/build/outputs/apk/debug/*.apk
+        arguments: assembleDebug
+        build-root-directory: android_app

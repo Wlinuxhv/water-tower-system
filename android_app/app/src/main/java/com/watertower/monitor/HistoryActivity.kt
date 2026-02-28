@@ -20,6 +20,11 @@ class HistoryActivity : AppCompatActivity() {
             finish()
         }
         
-        // TODO: 实现历史记录图表显示
+        // 显示提示信息
+        binding.textSelectedDate.text = "历史记录功能开发中..."
+        binding.chartWaterLevel.visibility = android.view.View.GONE
+        binding.textMaxLevel.text = "--"
+        binding.textMinLevel.text = "--"
+        binding.textAvgLevel.text = "--"
     }
 }
