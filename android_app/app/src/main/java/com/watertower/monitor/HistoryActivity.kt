@@ -22,7 +22,6 @@ class HistoryActivity : AppCompatActivity() {
         
         // 显示提示信息
         binding.textSelectedDate.text = "历史记录功能开发中..."
-        binding.chartWaterLevel.visibility = android.view.View.GONE
         binding.textMaxLevel.text = "--"
         binding.textMinLevel.text = "--"
         binding.textAvgLevel.text = "--"
