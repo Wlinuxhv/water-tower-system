@@ -100,6 +100,9 @@ void loop() {
     // 检查井水水位
     check_well_water();
     
+    // 保存历史记录 (每小时)
+    save_history();
+    
     // 更新 OLED 显示
     update_oled_display();
     
@@ -195,6 +198,16 @@ void setup_server() {
             server.send(200, "text/plain", "OK");
         } else {
             server.send(400, "text/plain", "Invalid params");
+        }
+    });
+    
+    // 获取历史记录
+    server.on("/api/history", HTTP_GET, []() {
+        if (server.hasArg("towerId")) {
+            uint8_t tower_id = server.arg("towerId").toInt();
+            send_history_json(tower_id);
+        } else {
+            server.send(400, "text/plain", "Missing towerId");
         }
     });
     
@@ -328,6 +341,59 @@ void update_oled_display() {
     }
     
     display.display();
+}
+
+// ==================== 保存历史记录 ====================
+void save_history() {
+    uint32_t now = millis() / 1000;
+    
+    // 每小时保存一次
+    if (now - sys_status.last_save < 3600) return;
+    sys_status.last_save = now;
+    
+    for (int i = 0; i < tower_count; i++) {
+        uint8_t idx = towers[i].history_index;
+        towers[i].history[idx].timestamp = now;
+        towers[i].history[idx].water_level = towers[i].water_level;
+        towers[i].history[idx].pump_status = towers[i].pump_on;
+        
+        // 循环缓冲区
+        towers[i].history_index = (idx + 1) % HISTORY_SIZE;
+    }
+    
+    Serial.println("历史记录已保存");
+}
+
+// ==================== 获取历史记录 API ====================
+void send_history_json(uint8_t tower_id) {
+    uint8_t idx = find_tower(tower_id);
+    if (idx >= MAX_TOWERS) {
+        server.send(404, "text/plain", "Tower not found");
+        return;
+    }
+    
+    String json = "[";
+    bool first = true;
+    
+    // 从最旧的数据开始
+    uint8_t start_idx = towers[idx].history_index;
+    for (int i = 0; i < HISTORY_SIZE; i++) {
+        uint8_t h_idx = (start_idx + i) % HISTORY_SIZE;
+        if (towers[idx].history[h_idx].timestamp > 0) {
+            if (!first) json += ",";
+            first = false;
+            
+            json += "{";
+            json += "\"towerId\":" + String(tower_id);
+            json += ",\"timestamp\":" + String(towers[idx].history[h_idx].timestamp * 1000UL);
+            json += ",\"waterLevel\":" + String(towers[idx].history[h_idx].water_level);
+            json += ",\"pumpStatus\":" + String(towers[idx].history[h_idx].pump_status);
+            json += "}";
+        }
+    }
+    
+    json += "]";
+    server.send(200, "application/json", json);
 }
 
 // ==================== 辅助函数 ====================

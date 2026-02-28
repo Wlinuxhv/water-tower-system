@@ -52,5 +52,8 @@ dependencies {
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     
+    // MPAndroidChart - 水位曲线图
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    
     testImplementation 'junit:junit:4.13.2'
 }
