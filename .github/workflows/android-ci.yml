@@ -26,15 +26,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
       
-    - name: 设置 Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        cache-disabled: true
-      
+    - name: 下载 Gradle 8.0
+      run: |
+        cd android_app
+        wget https://services.gradle.org/distributions/gradle-8.0-bin.zip
+        unzip -q gradle-8.0-bin.zip
+        export PATH=$PWD/gradle-8.0/bin:$PATH
+        
     - name: 生成 Gradle Wrapper
       working-directory: android_app
       run: |
-        gradle wrapper --gradle-version 8.0
+        gradle-8.0/bin/gradle wrapper --gradle-version 8.0
         
     - name: 编译 Debug APK
       working-directory: android_app
