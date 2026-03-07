@@ -89,14 +89,14 @@ jobs:
       if: github.event.inputs.sign_apk == 'true' || startsWith(github.ref, 'refs/tags/v')
       run: |
         echo "🔨 构建签名 Release APK..."
-        ./gradlew clean assembleRelease --no-daemon || {
+        bash gradlew clean assembleRelease --no-daemon || {
           echo "⚠️ 签名构建失败，尝试未签名构建..."
-          ./gradlew clean assembleRelease --no-daemon -PdisableSigning=true
+          bash gradlew clean assembleRelease --no-daemon -PdisableSigning=true
         }
     
     - name: 构建未签名 Debug APK
       if: github.event.inputs.sign_apk != 'true' && !startsWith(github.ref, 'refs/tags/v')
-      run: ./gradlew clean assembleDebug --no-daemon
+      run: bash gradlew clean assembleDebug --no-daemon
     
     - name: 获取版本信息
       id: version
