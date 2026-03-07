@@ -39,7 +39,7 @@ jobs:
         gradle wrapper --gradle-version 8.0
         echo "编译 Debug APK..."
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        bash gradlew assembleDebug --no-daemon --stacktrace
         echo "编译完成！"
         ls -la app/build/outputs/apk/debug/
         
