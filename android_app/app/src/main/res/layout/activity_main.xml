@@ -169,7 +169,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
-            android:drawableTop="@android:drawable/ic_dialog_map"
+            android:text="🏠 首页"
             android:text="首页"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
 
@@ -179,7 +179,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
-            android:drawableTop="@android:drawable/ic_menu_today"
+            android:text="📊 历史"
             android:text="历史"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
 
@@ -189,7 +189,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
-            android:drawableTop="@android:drawable/ic_menu_manage"
+            android:text="⚙️ 设置"
             android:text="设置"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
     </LinearLayout>
@@ -200,7 +200,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:src="@android:drawable/ic_menu_refresh"
+        android:src="@android:drawable/ic_menu_rotate"
         app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent" />
 
