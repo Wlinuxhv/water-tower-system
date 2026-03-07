@@ -1,0 +1,142 @@
+name: Build Beautiful APK
+
+on:
+  push:
+    branches: [ "master", "main", "feature/*" ]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检查代码
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 设置 JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+    
+    - name: 设置 Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: 8.0
+    
+    - name: 授予 gradlew 执行权限
+      run: chmod +x gradlew
+    
+    - name: 显示构建信息
+      run: |
+        echo "======================================"
+        echo "🚀 水塔监控系统 APK 构建"
+        echo "======================================"
+        echo "分支：${{ github.ref_name }}"
+        echo "提交：${{ github.sha }}"
+        echo "触发者：${{ github.actor }}"
+        echo "构建类型：${{ github.event.inputs.build_type || 'debug' }}"
+        echo "======================================"
+    
+    - name: 构建 Debug APK
+      if: github.event.inputs.build_type != 'release'
+      run: ./gradlew clean assembleDebug --no-daemon
+    
+    - name: 构建 Release APK
+      if: github.event.inputs.build_type == 'release'
+      run: ./gradlew clean assembleRelease --no-daemon
+    
+    - name: 收集构建信息
+      id: build_info
+      run: |
+        echo "build_time=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+        echo "commit_message=$(git log -1 --pretty=%B | head -1)" >> $GITHUB_OUTPUT
+    
+    - name: 上传 Debug APK
+      if: github.event.inputs.build_type != 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-app-debug-${{ github.run_number }}
+        path: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/debug/output-metadata.json
+        retention-days: 30
+    
+    - name: 上传 Release APK
+      if: github.event.inputs.build_type == 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-app-release-${{ github.run_number }}
+        path: |
+          app/build/outputs/apk/release/app-release.apk
+          app/build/outputs/apk/release/output-metadata.json
+        retention-days: 30
+    
+    - name: 创建 GitHub Release (仅 Tag 推送)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/release/app-release.apk
+        name: "💧 水塔监控 v${{ github.ref_name }}"
+        body: |
+          ## 🎉 发布信息
+          
+          **版本**: ${{ github.ref_name }}  
+          **构建号**: ${{ github.run_number }}  
+          **发布时间**: ${{ steps.build_info.outputs.build_time }}
+          
+          ## ✨ 更新内容
+          ${{ steps.build_info.outputs.commit_message }}
+          
+          ## 📱 安装说明
+          1. 下载 `app-debug.apk` 或 `app-release.apk`
+          2. 在 Android 设备上安装
+          3. 开启"未知来源"权限
+          
+          ## 🎨 美化特性
+          - 💧 蓝色渐变主题
+          - 📊 动态水位显示
+          - 🎯 Material Design 3 卡片
+          - ⚡ 流畅交互动画
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 上传到 Artifacts (所有构建)
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-${{ github.run_number }}
+        path: |
+          app/build/outputs/
+        retention-days: 7
+    
+    - name: 构建完成通知
+      run: |
+        echo "======================================"
+        echo "✅ 构建完成！"
+        echo "======================================"
+        echo "构建号：${{ github.run_number }}"
+        echo "APK 已上传到 Artifacts"
+        if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+          echo "Release 已创建：https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+        fi
+        echo "======================================"

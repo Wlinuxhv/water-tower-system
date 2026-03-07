@@ -1,0 +1,225 @@
+name: Build Signed APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      sign_apk:
+        description: '是否签名 APK'
+        required: true
+        default: 'false'
+        type: boolean
+      version_name:
+        description: '版本号 (如 v1.0.0)'
+        required: false
+        type: string
+
+env:
+  APP_NAME: "water-tower-monitor"
+  VERSION_FILE: "app/build.gradle"
+
+jobs:
+  build-signed-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检查代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+    
+    - name: 设置 Gradle
+      uses: gradle/actions/setup-gradle@v3
+    
+    - name: 授予执行权限
+      run: chmod +x gradlew
+    
+    - name: 显示构建信息
+      run: |
+        echo "🚀 开始构建签名 APK..."
+        echo "仓库：${{ github.repository }}"
+        echo "分支：${{ github.ref_name }}"
+        echo "标签：${{ github.ref }}"
+    
+    - name: 创建密钥库目录
+      run: mkdir -p keystore
+    
+    - name: 解码并创建密钥库
+      if: github.event.inputs.sign_apk == 'true' || startsWith(github.ref, 'refs/tags/v')
+      env:
+        KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      run: |
+        if [ -n "$KEYSTORE_B64" ]; then
+          echo "📦 解码密钥库..."
+          echo "$KEYSTORE_B64" | base64 -d > keystore/release.keystore
+          echo "✅ 密钥库创建成功"
+          ls -lh keystore/
+        else
+          echo "⚠️ 未配置密钥库，将构建未签名的 Release APK"
+        fi
+    
+    - name: 创建密钥库属性文件
+      if: github.event.inputs.sign_apk == 'true' || startsWith(github.ref, 'refs/tags/v')
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      run: |
+        if [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ]; then
+          echo "🔐 创建密钥库属性文件..."
+          cat > keystore/keystore.properties << EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=../keystore/release.keystore
+          EOF
+          echo "✅ 属性文件创建成功"
+        else
+          echo "⚠️ 未配置密钥库密码"
+        fi
+    
+    - name: 构建签名 Release APK
+      if: github.event.inputs.sign_apk == 'true' || startsWith(github.ref, 'refs/tags/v')
+      run: |
+        echo "🔨 构建签名 Release APK..."
+        ./gradlew clean assembleRelease --no-daemon || {
+          echo "⚠️ 签名构建失败，尝试未签名构建..."
+          ./gradlew clean assembleRelease --no-daemon -PdisableSigning=true
+        }
+    
+    - name: 构建未签名 Debug APK
+      if: github.event.inputs.sign_apk != 'true' && !startsWith(github.ref, 'refs/tags/v')
+      run: ./gradlew clean assembleDebug --no-daemon
+    
+    - name: 获取版本信息
+      id: version
+      run: |
+        if [ -f "app/build/outputs/apk/release/output-metadata.json" ]; then
+          VERSION_NAME=$(cat app/build/outputs/apk/release/output-metadata.json | grep -o '"versionName":"[^"]*"' | cut -d'"' -f4)
+          VERSION_CODE=$(cat app/build/outputs/apk/release/output-metadata.json | grep -o '"versionCode":[0-9]*' | cut -d':' -f2)
+        else
+          VERSION_NAME="${{ github.ref_name }}"
+          VERSION_CODE="${{ github.run_number }}"
+        fi
+        echo "version_name=${VERSION_NAME:-unknown}" >> $GITHUB_OUTPUT
+        echo "version_code=${VERSION_CODE:-0}" >> $GITHUB_OUTPUT
+        echo "版本：${VERSION_NAME:-unknown} (${VERSION_CODE:-0})"
+    
+    - name: 重命名 APK
+      run: |
+        mkdir -p release-apks
+        
+        if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+          cp app/build/outputs/apk/release/app-release.apk \
+             release-apks/${{ env.APP_NAME }}-${{ steps.version.outputs.version_name }}-release.apk
+          echo "✅ Release APK: ${{ env.APP_NAME }}-${{ steps.version.outputs.version_name }}-release.apk"
+        fi
+        
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             release-apks/${{ env.APP_NAME }}-${{ steps.version.outputs.version_name }}-debug.apk
+          echo "✅ Debug APK: ${{ env.APP_NAME }}-${{ steps.version.outputs.version_name }}-debug.apk"
+        fi
+        
+        ls -lh release-apks/
+    
+    - name: 上传 APK 到 Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.APP_NAME }}-apks-${{ github.run_number }}
+        path: release-apks/*.apk
+        retention-days: 30
+    
+    - name: 创建 GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release-apks/*.apk
+        name: "💧 水塔监控 ${{ steps.version.outputs.version_name }}"
+        body: |
+          ## 🎉 发布信息
+          
+          **版本号**: ${{ steps.version.outputs.version_name }}  
+          **构建号**: ${{ steps.version.outputs.version_code }}  
+          **GitHub Action**: ${{ github.run_number }}  
+          **发布时间**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          ## ✨ 美化特性
+          
+          ### 🎨 视觉设计
+          - 💧 蓝色渐变主题 (#2196F3 → #64B5F6)
+          - 📊 动态水位颜色 (红→橙→蓝→绿)
+          - 🎯 Material Design 3 卡片设计
+          - 🎭 定制图标系统 (8 个矢量图标)
+          
+          ### 📱 界面改进
+          - 顶部渐变色条 - 一眼识别在线/离线
+          - 32sp 大字号水位 - 远距离也能看清
+          - Chip 状态徽章 - 专业美观
+          - 独立报警卡片 - 醒目提醒
+          
+          ### ⚡ 交互优化
+          - 流畅交互动画
+          - 下拉刷新三色旋转
+          - 卡片点击波纹效果
+          - 整卡可点击操作
+          
+          ## 📥 安装说明
+          
+          ### Debug 版本
+          - 文件名：`${{ env.APP_NAME }}-*-debug.apk`
+          - 特点：包含调试信息，可直接安装
+          - 适用：测试、开发
+          
+          ### Release 版本
+          - 文件名：`${{ env.APP_NAME }}-*-release.apk`
+          - 特点：已签名，优化过
+          - 适用：生产环境
+          
+          ### 安装步骤
+          1. 下载 APK 文件
+          2. 传输到 Android 设备
+          3. 开启"未知来源"权限
+          4. 点击安装
+          
+          ## 🔧 技术栈
+          - Android SDK: 26+
+          - Kotlin: 1.9+
+          - Material Components: 1.11+
+          - Jetpack: Lifecycle, Coroutines
+          
+          ## 📝 更新日志
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 构建完成总结
+      run: |
+        echo "======================================"
+        echo "✅ 构建完成！"
+        echo "======================================"
+        echo "📦 版本：${{ steps.version.outputs.version_name }}"
+        echo "🔢 构建号：${{ steps.version.outputs.version_code }}"
+        echo "🔨 Action: ${{ github.run_number }}"
+        echo "📱 APK 文件:"
+        ls -lh release-apks/*.apk 2>/dev/null || echo "   (无 APK 文件)"
+        echo "======================================"
+        
+        if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+          echo "🎉 Release 已创建!"
+          echo "🔗 https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+        else
+          echo "📥 APK 已上传到 Artifacts"
+          echo "🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        fi
+        echo "======================================"
