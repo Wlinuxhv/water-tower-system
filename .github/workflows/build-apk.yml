@@ -27,7 +27,7 @@ jobs:
     - name: Build Debug APK
       run: |
         cd android_app
-        ./gradlew assembleDebug --stacktrace --no-daemon
+        bash gradlew assembleDebug --stacktrace --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
