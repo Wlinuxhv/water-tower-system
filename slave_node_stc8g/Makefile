@@ -2,10 +2,19 @@
 # 使用 SDCC 编译器
 
 # 编译器配置
+# STC8G 属于 8051 架构
 CC = sdcc
 MCU = stc8g1k08
-CFLAGS = --model-small --opt-code-size --no-xinit-opt
-CFLAGS += --int-long-reent --float-reent
+CFLAGS = -mmcs51
+CFLAGS += --model-small
+CFLAGS += --opt-code-size
+CFLAGS += --no-xinit-opt
+CFLAGS += --int-long-reent
+CFLAGS += --float-reent
+CFLAGS += --std-sdcc99
+CFLAGS += --all-callee-saves
+# 指定具体 MCU 型号（如果 SDCC 支持）
+# CFLAGS += --mcu=stc8g1k08
 
 # 目录结构
 SRC_DIR = src

@@ -7,13 +7,14 @@ OBJCOPY = objcopy
 
 # 目标文件
 TARGET = build/main
-SOURCES = src/main.c src/pan3031.c
 
 # 编译器标志
-CFLAGS = -mstc32g
+# STC32G 属于 8051 架构，使用 mmcs51 目标
+CFLAGS = -mmcs51
+CFLAGS += --model-small
 CFLAGS += --opt-code-size
 CFLAGS += --no-xinit-opt
-CFLAGS += -Isrc
+CFLAGS += --std-sdcc99
 
 # 输出格式
 OUTPUT_HEX = $(TARGET).hex
@@ -26,12 +27,19 @@ all: directories $(OUTPUT_HEX)
 directories:
 	mkdir -p build
 
-# 编译
-$(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) $(SOURCES) -o $(OUTPUT_IHX)
+# 分别编译每个源文件
+build/main.rel: src/main.c src/pan3031.h src/water_slave.h
+	$(CC) $(CFLAGS) -Isrc -c src/main.c -o build/main.rel
+
+build/pan3031.rel: src/pan3031.c src/pan3031.h
+	$(CC) $(CFLAGS) -Isrc -c src/pan3031.c -o build/pan3031.rel
+
+# 链接所有目标文件
+$(TARGET).ihx: build/main.rel build/pan3031.rel
+	$(CC) $(CFLAGS) build/main.rel build/pan3031.rel -o $(OUTPUT_IHX)
 
 # 生成 HEX 文件
-$(OUTPUT_HEX): $(TARGET)
+$(OUTPUT_HEX): $(TARGET).ihx
 	$(OBJCOPY) -I ihex -O ihex $(OUTPUT_IHX) $(OUTPUT_HEX)
 
 # 烧录 (需要 STC-ISP 工具)
