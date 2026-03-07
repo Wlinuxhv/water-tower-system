@@ -1,7 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">水塔任务</string>
+    <string name="app_name">水塔监控</string>
     <string name="hello_world">Hello Water Tower!</string>
     <string name="task_status">任务状态</string>
     <string name="build_success">构建成功!</string>
+    
+    <!-- 主界面 -->
+    <string name="title_home">首页</string>
+    <string name="title_history">历史</string>
+    <string name="title_settings">设置</string>
+    
+    <!-- 水塔状态 -->
+    <string name="tower_online">在线</string>
+    <string name="tower_offline">离线</string>
+    <string name="pump_on">开启水泵</string>
+    <string name="pump_off">停止水泵</string>
+    <string name="water_level">水位</string>
+    <string name="alarm_low_water">⚠️ 缺水报警</string>
+    <string name="alarm_overflow">⚠️ 溢水报警</string>
+    
+    <!-- 系统状态 -->
+    <string name="system_status">系统状态</string>
+    <string name="online_count">在线水塔</string>
+    <string name="well_water_status">井水状态</string>
+    <string name="well_water_ok">正常</string>
+    <string name="well_water_low">缺水</string>
+    <string name="auto_mode">自动模式</string>
+    <string name="manual_mode">手动模式</string>
+    
+    <!-- 操作 -->
+    <string name="refresh">刷新</string>
+    <string name="connect_device">连接设备</string>
+    <string name="demo_mode">演示模式</string>
+    <string name="server_address">服务器地址</string>
+    <string name="connect">连接</string>
+    <string name="cancel">取消</string>
 </resources>
