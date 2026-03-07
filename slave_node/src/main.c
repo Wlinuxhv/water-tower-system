@@ -7,7 +7,7 @@
  * 4. 通过 PAN3031 与主机通信
  */
 
-#include <STC32G.h>
+#include <STC32G.H>
 #include "pan3031.h"
 #include "water_slave.h"
 

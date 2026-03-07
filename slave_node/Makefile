@@ -7,7 +7,7 @@ OBJCOPY = objcopy
 
 # 目标文件
 TARGET = build/main
-SOURCES = src/main.c
+SOURCES = src/main.c src/pan3031.c
 
 # 编译器标志
 CFLAGS = -mstc32g

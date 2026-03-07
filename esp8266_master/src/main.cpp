@@ -42,10 +42,6 @@
 // 缺水传感器
 #define WATER_LOW_SENSOR D0  // GPIO16
 
-// 继电器控制 (可选，主机也可以控制水泵)
-#define RELAY_1 D8   // GPIO15
-#define RELAY_2 D9   // GPIO3
-
 // ==================== WiFi 配置 ====================
 const char* WIFI_SSID = "YourWiFiSSID";
 const char* WIFI_PASS = "YourWiFiPassword";

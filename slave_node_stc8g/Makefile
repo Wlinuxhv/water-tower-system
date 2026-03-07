@@ -39,8 +39,11 @@ $(BUILD_DIR)/main.rel: $(SRC_DIR)/main.c
 $(BUILD_DIR)/pan3031.rel: $(SRC_DIR)/pan3031.c
 	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
+$(BUILD_DIR)/sc09b.rel: $(SRC_DIR)/sc09b.c
+	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
+
 # 链接
-$(TARGET).ihx: $(BUILD_DIR)/main.rel $(BUILD_DIR)/pan3031.rel
+$(TARGET).ihx: $(BUILD_DIR)/main.rel $(BUILD_DIR)/pan3031.rel $(BUILD_DIR)/sc09b.rel
 	$(CC) $(CFLAGS) $^ -o $@
 
 # 生成 HEX 文件
