@@ -78,9 +78,9 @@ android {
         viewBinding true
     }
     
-    // APK 输出文件名自定义
+    // APK 输出文件名自定义 (AGP 8.x compatible)
     applicationVariants.all { variant ->
-        variant.outputs.all {
+        variant.outputs.configureEach { output ->
             def version = variant.versionName
             def buildType = variant.buildType.name
             def abi = output.getFilter(com.android.build.OutputFile.ABI)
