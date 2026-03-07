@@ -170,7 +170,6 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
             android:text="🏠 首页"
-            android:text="首页"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
 
         <Button
@@ -179,7 +178,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
-            android:text="📊 历史"
             android:text="历史"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
 
@@ -188,9 +186,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
             android:text="⚙️ 设置"
-            android:text="设置"
             style="@style/Widget.MaterialComponents.Button.TextButton" />
     </LinearLayout>
 
