@@ -65,30 +65,30 @@ jobs:
         name: stc32g-hex
         path: slave_node/build/main.hex
 
-  # STC8G1K08 编译 (slave_node_stc8g 目录)
-  stc8g:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 安装 SDCC
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y sdcc binutils
-        
-    - name: 编译 STC8G
-      working-directory: slave_node_stc8g
-      run: |
-        make clean
-        make
-        
-    - name: 上传 HEX 文件
-      uses: actions/upload-artifact@v4
-      with:
-        name: stc8g-hex
-        path: slave_node_stc8g/output/water_slave_stc8g.hex
+  # STC8G1K08 编译 (slave_node_stc8g 目录) - 暂时禁用
+  # stc8g:
+  #   runs-on: ubuntu-latest
+  #   
+  #   steps:
+  #   - name: 检出代码
+  #     uses: actions/checkout@v4
+  #     
+  #   - name: 安装 SDCC
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install -y sdcc binutils
+  #       
+  #   - name: 编译 STC8G
+  #     working-directory: slave_node_stc8g
+  #     run: |
+  #       make clean
+  #       make
+  #       
+  #   - name: 上传 HEX 文件
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: stc8g-hex
+  #       path: slave_node_stc8g/output/water_slave_stc8g.hex
 
   # 代码检查
   lint:
