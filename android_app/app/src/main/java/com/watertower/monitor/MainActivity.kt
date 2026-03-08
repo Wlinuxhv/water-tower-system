@@ -128,53 +128,17 @@ class MainActivity : AppCompatActivity() {
     private fun togglePump(tower: TowerData) {
         val newStatus = !tower.pumpOn
         
-        if (demoMode) {
-            // 演示模式：直接更新
-            val index = towers.indexOfFirst { it.id == tower.id }
-            if (index >= 0) {
-                towers[index] = tower.copy(pumpOn = newStatus)
-                towerAdapter.notifyItemChanged(index)
-                
-                Toast.makeText(
-                    this,
-                    "${tower.name} 水泵已${if (newStatus) "开启" else "关闭"}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        } else {
-            // 实际模式：调用 API
-            ApiClient.api.controlPump(tower.id, newStatus).enqueue(
-                object : retrofit2.Callback<retrofit2.Response<Unit>> {
-                    override fun onResponse(call: retrofit2.Call<Unit>, response: retrofit2.Response<Unit>) {
-                        if (response.isSuccessful) {
-                            val index = towers.indexOfFirst { it.id == tower.id }
-                            if (index >= 0) {
-                                towers[index] = tower.copy(pumpOn = newStatus)
-                                towerAdapter.notifyItemChanged(index)
-                            }
-                            Toast.makeText(
-                                this@MainActivity,
-                                "控制成功",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "控制失败：${response.code()}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                    
-                    override fun onFailure(call: retrofit2.Call<Unit>, t: Throwable) {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "网络错误：${t.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            )
+        // 演示模式：直接更新
+        val index = towers.indexOfFirst { it.id == tower.id }
+        if (index >= 0) {
+            towers[index] = tower.copy(pumpOn = newStatus)
+            towerAdapter.notifyItemChanged(index)
+            
+            Toast.makeText(
+                this,
+                "${tower.name} 水泵已${if (newStatus) "开启" else "关闭"}",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
     
