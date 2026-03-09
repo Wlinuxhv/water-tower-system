@@ -1,0 +1,35 @@
+name: Runner Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: Hello
+      run: |
+        Write-Host "Hello from Windows Runner!"
+        Write-Host "Runner: ${{ runner.name }}"
+        Write-Host "OS: ${{ runner.os }}"
+      shell: pwsh
+      
+    - name: Check Java
+      run: |
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Java found"
+          java -version 2>&1 | Select-Object -First 1
+        } else {
+          Write-Host "❌ Java not found"
+        }
+      shell: pwsh
+      
+    - name: Check Android
+      run: |
+        if ($env:ANDROID_HOME) {
+          Write-Host "✅ ANDROID_HOME: $env:ANDROID_HOME"
+        } else {
+          Write-Host "❌ ANDROID_HOME not set"
+        }
+      shell: pwsh
