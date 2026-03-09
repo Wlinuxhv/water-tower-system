@@ -1,0 +1,89 @@
+name: Android Build - Windows Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: self-hosted
+    
+    steps:
+    - name: 检查环境
+      run: |
+        Write-Host "=== 检查环境 ==="
+        Write-Host "Runner: ${{ runner.name }}"
+        Write-Host "OS: ${{ runner.os }}"
+        
+        # 检查 Java
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Java 已安装"
+          java -version 2>&1 | Select-Object -First 1
+        } else {
+          Write-Host "❌ Java 未安装"
+        }
+        
+        # 检查 Android SDK
+        if ($env:ANDROID_HOME) {
+          Write-Host "✅ ANDROID_HOME: $env:ANDROID_HOME"
+        } else {
+          Write-Host "❌ ANDROID_HOME 未设置"
+        }
+        
+        # 检查 Gradle
+        if (Test-Path "android_app/gradlew.bat") {
+          Write-Host "✅ Gradle Wrapper 存在"
+        } else {
+          Write-Host "❌ Gradle Wrapper 不存在"
+        }
+      shell: pwsh
+      
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 编译 APK
+      working-directory: android_app
+      run: |
+        Write-Host "=== 开始编译 ==="
+        
+        # 显示 Gradle 版本
+        if (Test-Path "gradlew.bat") {
+          .\gradlew.bat --version
+        }
+        
+        # 编译
+        Write-Host "编译 Debug APK..."
+        .\gradlew.bat assembleDebug --no-daemon --stacktrace
+        
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "✅ 编译成功!"
+        } else {
+          Write-Host "❌ 编译失败!"
+          exit 1
+        }
+      shell: pwsh
+      timeout-minutes: 30
+      
+    - name: 查找 APK
+      run: |
+        Write-Host "=== 查找 APK ==="
+        $apk = Get-ChildItem -Recurse -Filter "*.apk" -Path "android_app/app/build/outputs/apk/debug" | 
+               Sort-Object LastWriteTime -Descending | 
+               Select-Object -First 1
+        
+        if ($apk) {
+          $sizeMB = [math]::Round($apk.Length / 1MB, 2)
+          Write-Host "✅ 找到 APK: $($apk.Name)"
+          Write-Host "   大小：$sizeMB MB"
+          Write-Host "   路径：$($apk.FullName)"
+        } else {
+          Write-Host "❌ 未找到 APK"
+          exit 1
+        }
+      shell: pwsh
+      
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-test
+        path: android_app/app/build/outputs/apk/debug/*.apk
+        retention-days: 7
