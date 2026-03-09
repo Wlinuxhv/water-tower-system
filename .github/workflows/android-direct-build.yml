@@ -1,0 +1,129 @@
+name: Android Build - Direct Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: 显示环境信息
+      run: |
+        echo === Runner Info ===
+        echo Runner: %RUNNER_NAME%
+        echo OS: %OS%
+        echo JAVA_HOME: %JAVA_HOME%
+        echo ANDROID_HOME: %ANDROID_HOME%
+        echo ANDROID_SDK_ROOT: %ANDROID_SDK_ROOT%
+        
+        echo.
+        echo === 检查 Java ===
+        where java 2>nul && java -version || echo Java not in PATH
+        
+        echo.
+        echo === 检查 Android SDK ===
+        if defined ANDROID_HOME (
+          echo SDK: %ANDROID_HOME%
+          dir %ANDROID_HOME%\platforms 2>nul | find "android-"
+        ) else (
+          echo ANDROID_HOME not set
+        )
+        
+        echo.
+        echo === 检查 Gradle ===
+        where gradle 2>nul && gradle --version || echo Gradle not in PATH
+        
+        echo.
+        echo === 检查 Android Studio ===
+        dir "C:\Program Files\Android\Android Studio" 2>nul || echo Android Studio not found
+        
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 检查项目
+      run: |
+        echo === 项目结构 ===
+        dir android_app\*.gradle
+        dir android_app\app\*.gradle
+        dir android_app\gradlew.bat
+        dir android_app\local.properties 2>nul || echo local.properties not found
+        
+    - name: 设置本地属性
+      working-directory: android_app
+      run: |
+        echo sdk.dir=%ANDROID_HOME% > local.properties
+        echo 创建 local.properties:
+        type local.properties
+        
+    - name: 清理构建
+      working-directory: android_app
+      run: |
+        echo === 清理旧构建 ===
+        if exist app\build rmdir /s /q app\build
+        if exist build rmdir /s /q build
+        if exist .gradle rmdir /s /q .gradle
+        echo 清理完成
+        
+    - name: 编译 Debug APK
+      working-directory: android_app
+      run: |
+        echo === 开始编译 ===
+        echo 使用 Gradle Wrapper...
+        
+        if exist gradlew.bat (
+          echo 执行：gradlew.bat assembleDebug
+          call gradlew.bat assembleDebug --no-daemon --stacktrace
+          
+          if errorlevel 1 (
+            echo 编译失败!
+            exit /b 1
+          )
+          
+          echo 编译成功!
+        ) else (
+          echo gradlew.bat 不存在!
+          exit /b 1
+        )
+        
+    - name: 查找 APK
+      id: apk
+      run: |
+        echo === 查找 APK 文件 ===
+        for /f "delims=" %%f in ('dir /b /o-d android_app\app\build\outputs\apk\debug\*.apk 2^>nul') do (
+          set "APK_FILE=%%f"
+          goto :found
+        )
+        
+        echo 未找到 APK!
+        exit /b 1
+        
+        :found
+        echo 找到 APK: %APK_FILE%
+        for %%A in ("android_app\app\build\outputs\apk\debug\%APK_FILE%") do (
+          set "APK_SIZE=%%~zA"
+        )
+        echo 文件大小：%APK_SIZE% 字节
+        set /a APK_MB=%APK_SIZE%/1048576
+        echo 文件大小：约 %APK_MB% MB
+        
+        echo apk-path=android_app\app\build\outputs\apk\debug\%APK_FILE% >> %GITHUB_OUTPUT%
+        echo apk-name=%APK_FILE% >> %GITHUB_OUTPUT%
+        
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-debug
+        path: ${{ steps.apk.outputs.apk-path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      run: |
+        echo.
+        echo ================================
+        echo     构建完成!
+        echo ================================
+        echo APK: ${{ steps.apk.outputs.apk-name }}
+        echo 大小：约 ${{ steps.apk.outputs.apk-size }} MB
+        echo 下载：https://github.com/%GITHUB_REPOSITORY%/actions/runs/%GITHUB_RUN_ID%
+        echo ================================
