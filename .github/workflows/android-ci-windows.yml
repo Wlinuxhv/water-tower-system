@@ -1,0 +1,404 @@
+name: Android CI - Windows Build
+
+on:
+  push:
+    paths:
+      - 'android_app/**'
+    branches: [ main, master ]
+  pull_request:
+    paths:
+      - 'android_app/**'
+  workflow_dispatch:
+
+jobs:
+  # 检测 Windows Runner 环境
+  check-windows-runner:
+    runs-on: self-hosted
+    outputs:
+      java-version: ${{ steps.check-java.outputs.version }}
+      android-sdk: ${{ steps.check-android.outputs.sdk }}
+      gradle-version: ${{ steps.check-gradle.outputs.version }}
+    steps:
+    - name: 检查 Runner 信息
+      id: check-runner
+      run: |
+        Write-Host "=== Runner 信息 ==="
+        Write-Host "Runner OS: ${{ runner.os }}"
+        Write-Host "Runner Name: ${{ runner.name }}"
+        Write-Host "Runner Arch: ${{ runner.arch }}"
+        Write-Host "Number of CPUs: $env:NUMBER_OF_PROCESSORS"
+        $mem = [math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize/1MB, 2)
+        Write-Host "Total Memory: $mem GB"
+        Write-Host "OS Name: $(Get-CimInstance Win32_OperatingSystem).Caption"
+        Write-Host "OS Version: $(Get-CimInstance Win32_OperatingSystem).Version"
+      shell: pwsh
+      
+    - name: 检查 Java 环境
+      id: check-java
+      run: |
+        Write-Host "=== 检查 Java 环境 ==="
+        
+        # 检查 JAVA_HOME
+        if ($env:JAVA_HOME) {
+          Write-Host "✅ JAVA_HOME: $env:JAVA_HOME"
+          $javaExe = "$env:JAVA_HOME\bin\java.exe"
+          if (Test-Path $javaExe) {
+            $version = & $javaExe -version 2>&1 | Select-String "version" | Select-Object -First 1
+            Write-Host "Java 版本：$version"
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+          }
+        } else {
+          Write-Host "⚠️ JAVA_HOME 未设置"
+          
+          # 尝试查找 Java
+          $javaPaths = @(
+            "C:\Program Files\Java\jdk-17\bin\java.exe",
+            "C:\Program Files\Java\jdk17\bin\java.exe",
+            "C:\Program Files\Eclipse Adoptium\jdk-17-hotspot\bin\java.exe",
+            "C:\Program Files\Android\jdk\bin\java.exe"
+          )
+          
+          foreach ($path in $javaPaths) {
+            if (Test-Path $path) {
+              Write-Host "✅ 找到 Java: $path"
+              $version = & $path -version 2>&1 | Select-String "version" | Select-Object -First 1
+              Write-Host "Java 版本：$version"
+              echo "version=$version" >> $env:GITHUB_OUTPUT
+              echo "JAVA_HOME=$($path -replace '\\bin\\java.exe', '')" >> $env:GITHUB_ENV
+              break
+            }
+          }
+        }
+        
+        # 验证 java 命令
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ java 命令可用"
+          java -version 2>&1 | Select-Object -First 1
+        } else {
+          Write-Host "❌ java 命令不可用"
+        }
+      shell: pwsh
+      
+    - name: 检查 Android SDK
+      id: check-android
+      run: |
+        Write-Host "=== 检查 Android SDK ==="
+        
+        # 检查 ANDROID_HOME 和 ANDROID_SDK_ROOT
+        $sdkPaths = @(
+          $env:ANDROID_HOME,
+          $env:ANDROID_SDK_ROOT,
+          "C:\Android\android-sdk",
+          "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk",
+          "C:\Program Files\Android\android-sdk"
+        )
+        
+        $foundSdk = $false
+        foreach ($path in $sdkPaths) {
+          if ($path -and (Test-Path $path)) {
+            Write-Host "✅ Android SDK: $path"
+            echo "sdk=$path" >> $env:GITHUB_OUTPUT
+            echo "ANDROID_HOME=$path" >> $env:GITHUB_ENV
+            echo "ANDROID_SDK_ROOT=$path" >> $env:GITHUB_ENV
+            $env:Path = "$path\platform-tools;$path\tools;$path\cmdline-tools\latest\bin;$env:Path"
+            echo "$path\platform-tools" >> $env:GITHUB_PATH
+            echo "$path\tools" >> $env:GITHUB_PATH
+            $foundSdk = $true
+            
+            # 显示 SDK 信息
+            if (Test-Path "$path\platforms") {
+              $platforms = Get-ChildItem "$path\platforms" | Select-Object -ExpandProperty Name
+              Write-Host "已安装平台：$($platforms -join ', ')"
+            }
+            
+            if (Test-Path "$path\build-tools") {
+              $buildTools = Get-ChildItem "$path\build-tools" | Select-Object -ExpandProperty Name
+              Write-Host "已安装 Build Tools: $($buildTools -join ', ')"
+            }
+            
+            break
+          }
+        }
+        
+        if (-not $foundSdk) {
+          Write-Host "⚠️ 未找到 Android SDK"
+        }
+        
+        # 检查 adb
+        if (Get-Command adb -ErrorAction SilentlyContinue) {
+          Write-Host "✅ adb 可用"
+          adb --version | Select-Object -First 1
+        } else {
+          Write-Host "⚠️ adb 不可用"
+        }
+      shell: pwsh
+      
+    - name: 检查 Gradle
+      id: check-gradle
+      run: |
+        Write-Host "=== 检查 Gradle ==="
+        
+        # 检查 gradle 命令
+        if (Get-Command gradle -ErrorAction SilentlyContinue) {
+          $version = gradle --version 2>&1 | Select-String "Gradle" | Select-Object -First 1
+          Write-Host "✅ Gradle 已安装"
+          Write-Host "$version"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "⚠️ gradle 命令不可用 (将使用 Gradle Wrapper)"
+          echo "version=Gradle Wrapper" >> $env:GITHUB_OUTPUT
+        }
+        
+        # 检查 Gradle Wrapper
+        if (Test-Path "android_app/gradlew.bat") {
+          Write-Host "✅ Gradle Wrapper 存在"
+        } else {
+          Write-Host "⚠️ Gradle Wrapper 不存在"
+        }
+      shell: pwsh
+      
+    - name: 检查项目结构
+      run: |
+        Write-Host "=== 检查项目结构 ==="
+        
+        $files = @(
+          "android_app/build.gradle",
+          "android_app/app/build.gradle",
+          "android_app/settings.gradle",
+          "android_app/gradlew.bat",
+          "android_app/gradle/wrapper/gradle-wrapper.properties"
+        )
+        
+        foreach ($file in $files) {
+          if (Test-Path $file) {
+            Write-Host "✅ $file"
+          } else {
+            Write-Host "❌ $file (不存在)"
+          }
+        }
+        
+        # 显示 build.gradle 配置
+        if (Test-Path "android_app/app/build.gradle") {
+          Write-Host "`n=== app/build.gradle 配置 ==="
+          Get-Content "android_app/app/build.gradle" | Select-String "compileSdk|targetSdk|minSdk|buildToolsVersion" | ForEach-Object {
+            Write-Host "  $_"
+          }
+        }
+      shell: pwsh
+
+  # Android APK 构建 (Windows)
+  build-apk-windows:
+    runs-on: self-hosted
+    needs: check-windows-runner
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置环境变量
+      run: |
+        # 设置 Android SDK 路径
+        $sdkPaths = @(
+          $env:ANDROID_HOME,
+          $env:ANDROID_SDK_ROOT,
+          "C:\Android\android-sdk",
+          "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk"
+        )
+        
+        foreach ($path in $sdkPaths) {
+          if ($path -and (Test-Path $path)) {
+            echo "ANDROID_HOME=$path" >> $env:GITHUB_ENV
+            echo "ANDROID_SDK_ROOT=$path" >> $env:GITHUB_ENV
+            echo "$path\platform-tools" >> $env:GITHUB_PATH
+            echo "$path\tools" >> $env:GITHUB_PATH
+            echo "$path\cmdline-tools\latest\bin" >> $env:GITHUB_PATH
+            break
+          }
+        }
+        
+        # 设置 JAVA_HOME (如果未设置)
+        if (-not $env:JAVA_HOME) {
+          $javaPaths = @(
+            "C:\Program Files\Java\jdk-17",
+            "C:\Program Files\Java\jdk17",
+            "C:\Program Files\Eclipse Adoptium\jdk-17-hotspot"
+          )
+          
+          foreach ($path in $javaPaths) {
+            if (Test-Path $path) {
+              echo "JAVA_HOME=$path" >> $env:GITHUB_ENV
+              echo "$path\bin" >> $env:GITHUB_PATH
+              break
+            }
+          }
+        }
+        
+        Write-Host "✅ 环境变量已设置"
+        Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
+        Write-Host "JAVA_HOME: $env:JAVA_HOME"
+      shell: pwsh
+      
+    - name: 授予 Gradle 执行权限
+      working-directory: android_app
+      run: |
+        # Windows 不需要 chmod，但确保 gradlew.bat 存在
+        if (Test-Path "gradlew.bat") {
+          Write-Host "✅ gradlew.bat 存在"
+        } else {
+          Write-Host "❌ gradlew.bat 不存在"
+          exit 1
+        }
+      shell: pwsh
+      
+    - name: 清理构建缓存
+      working-directory: android_app
+      run: |
+        Write-Host "清理构建缓存..."
+        if (Test-Path "app\build") { Remove-Item -Recurse -Force "app\build" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        if (Test-Path ".gradle") { Remove-Item -Recurse -Force ".gradle" }
+        Write-Host "✅ 清理完成"
+      shell: pwsh
+      
+    - name: 下载 Gradle 依赖
+      working-directory: android_app
+      run: |
+        Write-Host "下载 Gradle 依赖..."
+        .\gradlew.bat --version
+        .\gradlew.bat tasks --all --quiet
+        Write-Host "✅ 依赖下载完成"
+      shell: pwsh
+      timeout-minutes: 10
+      
+    - name: 编译 Debug APK
+      id: build
+      working-directory: android_app
+      run: |
+        Write-Host "=== 开始编译 Debug APK ==="
+        Write-Host "Gradle 版本:"
+        .\gradlew.bat --version
+        
+        Write-Host "`n项目配置:"
+        Get-Content "app\build.gradle" | Select-String "compileSdk|targetSdk|minSdk" | ForEach-Object {
+          Write-Host "  $_"
+        }
+        
+        Write-Host "`n编译 APK..."
+        .\gradlew.bat assembleDebug --no-daemon --stacktrace --info
+        
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "`n✅ 编译成功!"
+        } else {
+          Write-Host "`n❌ 编译失败!"
+          exit 1
+        }
+      shell: pwsh
+      timeout-minutes: 30
+      
+    - name: 查找 APK 文件
+      id: find-apk
+      working-directory: android_app
+      run: |
+        Write-Host "=== 查找 APK 文件 ==="
+        
+        $apkPath = Get-ChildItem -Recurse -Filter "*.apk" -Path "app\build\outputs\apk\debug" | 
+                   Sort-Object LastWriteTime -Descending | 
+                   Select-Object -First 1
+        
+        if ($apkPath) {
+          Write-Host "✅ 找到 APK: $($apkPath.FullName)"
+          $sizeMB = [math]::Round($apkPath.Length / 1MB, 2)
+          Write-Host "文件大小：$sizeMB MB"
+          Write-Host "最后修改：$($apkPath.LastWriteTime)"
+          
+          echo "apk-path=$($apkPath.FullName)" >> $env:GITHUB_OUTPUT
+          echo "apk-name=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
+          echo "apk-size=$sizeMB MB" >> $env:GITHUB_OUTPUT
+          
+          # 复制 APK 到统一位置
+          $destPath = "app\build\outputs\apk\debug\water-tower-monitor-debug.apk"
+          Copy-Item $apkPath.FullName $destPath -Force
+          Write-Host "已复制 APK 到：$destPath"
+        } else {
+          Write-Host "❌ 未找到 APK 文件"
+          exit 1
+        }
+      shell: pwsh
+      
+    - name: 显示构建信息
+      run: |
+        Write-Host "=== 构建信息 ==="
+        Write-Host "APK 路径：${{ steps.find-apk.outputs.apk-path }}"
+        Write-Host "APK 名称：${{ steps.find-apk.outputs.apk-name }}"
+        Write-Host "APK 大小：${{ steps.find-apk.outputs.apk-size }}"
+        Write-Host "Runner: ${{ runner.name }}"
+        Write-Host "构建时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+      shell: pwsh
+      
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-debug-windows
+        path: ${{ steps.find-apk.outputs.apk-path }}
+        retention-days: 30
+        
+    - name: 上传构建报告
+      if: always()
+      run: |
+        # 创建构建报告
+        $report = @"
+        # Android 构建报告
+        
+        ## 构建信息
+        - 时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+        - Runner: ${{ runner.name }}
+        - OS: Windows 10
+        - 状态：${{ job.status }}
+        
+        ## APK 信息
+        - 名称：${{ steps.find-apk.outputs.apk-name }}
+        - 大小：${{ steps.find-apk.outputs.apk-size }}
+        - 路径：${{ steps.find-apk.outputs.apk-path }}
+        
+        ## 环境信息
+        - JAVA_HOME: $env:JAVA_HOME
+        - ANDROID_HOME: $env:ANDROID_HOME
+        "@
+        
+        $report | Out-File -FilePath "build-report.md" -Encoding UTF8
+        Write-Host "构建报告已创建"
+      shell: pwsh
+
+  # 构建总结
+  build-summary:
+    runs-on: self-hosted
+    needs: [check-windows-runner, build-apk-windows]
+    if: always()
+    
+    steps:
+    - name: 生成构建总结
+      run: |
+        Write-Host "## 📱 Android APK 构建总结" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        
+        Write-Host "### Runner 信息" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- 名称：${{ needs.check-windows-runner.outputs.runner-name }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- OS: Windows 10" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- Java: ${{ needs.check-windows-runner.outputs.java-version }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- Android SDK: ${{ needs.check-windows-runner.outputs.android-sdk }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        
+        Write-Host "### 构建状态" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        $buildStatus = "${{ needs.build-apk-windows.result }}"
+        if ($buildStatus -eq "success") {
+          Write-Host "| 项目 | 状态 | 产物 |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          Write-Host "|------|------|------|" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          Write-Host "| Android APK | ✅ 成功 | water-tower-monitor-debug.apk |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        } else {
+          Write-Host "| Android APK | ❌ $buildStatus | - |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        }
+        
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "### 下载 APK" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- [water-tower-monitor-debug-windows](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+      shell: pwsh
