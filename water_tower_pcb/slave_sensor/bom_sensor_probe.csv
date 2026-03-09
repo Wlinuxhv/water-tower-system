@@ -1,0 +1,9 @@
+Designator,Quantity,Value,Footprint,Description,Unit Price (CNY),Total (CNY)
+J1,1,TerminalBlock_3P,TerminalBlock_5mm_3P,液位传感器接口，0.50,0.50
+J2,1,TerminalBlock_3P,TerminalBlock_5mm_3P,缺水传感器接口，0.50,0.50
+J3,1,RJ45_8P,RJ45_8P,连接到控制器，2.00,2.00
+C1,1,100nF,C_0805,滤波电容，0.03,0.03
+LED1,1,LED_GREEN,LED_0805,状态指示灯，0.05,0.05
+R1,1,10kΩ,R_0805,上拉电阻，0.02,0.02
+PCB,1,80x90mm,2Layer,PCB 制板，3.00,3.00
+,,,,,,小计：,6.10

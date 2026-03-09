@@ -1,0 +1,13 @@
+Designator,Quantity,Value,Footprint,Description,Unit Price (CNY),Total (CNY)
+U1,1,AMS1117-3.3,SOIC-8,LDO 稳压器，0.80,0.80
+U2,1,STC8G1K08,SOP-16,MCU 单片机，1.20,1.20
+U3,1,PAN3031,DIP-8,LoRa 模块，4.50,4.50
+K1,1,Relay_5V_SMD,SMD_Relay_5P,5V 继电器，1.50,1.50
+J1,1,TerminalBlock_2P,TerminalBlock_5mm_2P,电源输入，0.40,0.40
+J2,1,TerminalBlock_2P,TerminalBlock_5mm_2P,水泵输出，0.40,0.40
+J3,1,RJ45_8P,RJ45_8P,连接传感器，2.00,2.00
+SW1,1,DIP_2P,DIP_Switch_2P,地址设置，0.30,0.30
+R1,1,10kΩ,R_0805,上拉电阻，0.02,0.02
+C1,1,100nF,C_0805,滤波电容，0.03,0.03
+PCB,1,100x90mm,2Layer,PCB 制板，3.50,3.50
+,,,,,,小计：,14.65
