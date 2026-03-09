@@ -16,7 +16,7 @@ https://github.com/Wlinuxhv/water-tower-system (注意是连字符 `-` 不是下
 
 ### 设计内容
 ✅ **主机 (Master) PCB** - ESP8266 + LoRa + OLED  
-✅ **从机 (Slave) PCB** - STC32G + LoRa + 继电器  
+✅ **从机 (Slave) PCB** - STC8G1K08 + LoRa + 继电器  
 ✅ **完整 Gerber 文件** - 可直接用于嘉立创生产  
 ✅ **BOM 物料清单** - 含立创商城链接  
 ✅ **装配文档** - 焊接和调试指南
@@ -148,7 +148,7 @@ cd /app/working/water_tower_pcb
 | 类别 | 主机 | 从机 | 说明 |
 |------|------|------|------|
 | ESP8266 NodeMCU | ¥25 | - | WiFi 模块 |
-| STC32G12K128 | - | ¥35 | 单片机 |
+| STC8G1K0812K128 | - | ¥35 | 单片机 |
 | PAN3031 LoRa | ¥35 | ¥35 | 433MHz 模块 |
 | 被动元件 | ¥20 | ¥30 | 电阻电容 |
 | 连接器 | ¥15 | ¥25 | 端子排针 |
@@ -188,7 +188,7 @@ cd /app/working/water_tower_pcb
 
 | 参数 | 规格 |
 |------|------|
-| MCU | STC32G12K128 |
+| MCU | STC8G1K0812K128 |
 | 通信 | PAN3031 LoRa 433MHz |
 | ADC | 12 位内置 ADC |
 | 执行器 | 5V 继电器 (10A) |

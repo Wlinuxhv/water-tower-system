@@ -14,7 +14,7 @@ water_tower_pcb/
 │   ├── water_tower_master.kicad_pcb  # KiCad PCB 文件
 │   ├── bom.csv                  # 物料清单
 │   └── pos.csv                  # 元件坐标文件
-├── slave/                       # 从机 (STC32G) PCB 文件
+├── slave/                       # 从机 (STC8G1K08) PCB 文件
 │   ├── water_tower_slave.kicad_pcb   # KiCad PCB 文件
 │   ├── bom.csv                  # 物料清单
 │   └── pos.csv                  # 元件坐标文件
@@ -97,7 +97,7 @@ water_tower_pcb/
 - 电阻电容 (0805 封装)
 - AMS1117-3.3 LDO
 - 二极管、三极管
-- IC 插座 (STC32G 建议用插座)
+- IC 插座 (STC8G1K08 建议用插座)
 
 **建议手工焊接**:
 - ESP8266 模块 (买成品模块)
@@ -150,7 +150,7 @@ water_tower_pcb/
 
 **主要元件**:
 - U1: AMS1117-3.3 (LDO 稳压器)
-- U2: STC32G12K128 (单片机，建议用 LQFP48 插座)
+- U2: STC8G1K0812K128 (单片机，建议用 LQFP48 插座)
 - U3: PAN3031 (LoRa 433MHz 模块)
 - K1: 5V 继电器 (10A)
 - J1: 12V 电源 + 水泵控制端子
@@ -193,7 +193,7 @@ water_tower_pcb/
 
 1. **焊接矮元件**: 同主机
 
-2. **焊接 STC32G**:
+2. **焊接 STC8G1K08**:
    - 建议使用 LQFP48 插座
    - 先焊接插座，再插入芯片
    - 注意芯片方向 (缺口标记)
@@ -292,7 +292,7 @@ water_tower_pcb/
 
 | 类别 | 主机 | 从机 | 说明 |
 |------|------|------|------|
-| MCU/模块 | ¥60 | ¥70 | ESP8266 + PAN3031 / STC32G + PAN3031 |
+| MCU/模块 | ¥60 | ¥70 | ESP8266 + PAN3031 / STC8G1K08 + PAN3031 |
 | 被动元件 | ¥20 | ¥30 | 电阻、电容、电感 |
 | 连接器 | ¥15 | ¥25 | 端子、排针 |
 | 电源 | ¥15 | ¥15 | LDO、DC-DC |

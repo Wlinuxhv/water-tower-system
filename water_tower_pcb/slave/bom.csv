@@ -1,0 +1,18 @@
+Designator,Quantity,Value,Footprint,Manufacturer,MPN,Description,LCSC Part#,Unit Price (CNY)
+U1,1,AMS1117-3.3,SOIC-8,Advanced Monolithic,AMS1117-3.3,LDO Regulator 3.3V 1A,C6186,0.80
+U2,1,STC8G1K08,SOP-16,STC Micro,STC8G1K08A08-SOP16,8KB Flash MCU,C2830746,1.20
+U3,1,PAN3031,DIP-8,Hoperf,PAN3031,LoRa Transceiver 433MHz,C2830745,4.50
+J1,1,CONN_POWER,TerminalBlock_2P_5mm,Weidmuller,1826360000,Terminal Block 2 Pin (5V Input),C110005,0.40
+J2,1,CONN_SENSOR_POWER,TerminalBlock_2P_5mm,Weidmuller,1826360000,Terminal Block 2 Pin (24V Sensor),C110005,0.40
+J3,1,CONN_SENSOR_SIGNAL,TerminalBlock_3P_5mm,Weidmuller,1826370000,Terminal Block 3 Pin (4-20mA),C110006,0.50
+J4,1,CONN_WATER_LOW,TerminalBlock_2P_5mm,Weidmuller,1826360000,Terminal Block 2 Pin (Water Low),C110005,0.40
+SW1,1,DIP_2P,DIP_Switch_2P,CT,DS02-5V,2 Position DIP Switch (Node ID),C43801,0.30
+R1,1,10kΩ,R_0805_2012Metric,Yageo,RC0805FR-0710KL,Resistor 10kΩ 0805 (Pull-up),C103866,0.02
+R2,1,250Ω,R_1206_3216Metric,Yageo,RC1206FR-07250RL,Resistor 250Ω 1% 1206 (4-20mA to Voltage),C103870,0.03
+C1,2,100nF,C_0805_2012Metric,Murata,GRM21BR71H104KA01L,Capacitor 100nF 0805 (Decoupling),C107112,0.03
+C2,1,10uF,C_0805_2012Metric,Murata,GRM21BR61A106KE19L,Capacitor 10uF 0805 (Power Filter),C107113,0.08
+C3,1,22pF,C_0805_2012Metric,Murata,GRM21BR71H220KA01L,Capacitor 22pF 0805 (Crystal),C107114,0.03
+D1,1,LED_GREEN,LED_0805_2012Metric,Kingbright,APT2012SGC,LED Green 0805 (Power Indicator),C2287,0.05
+F1,1,2A,1206,Bourns,MF-USMF020-2,Fuse Resettable 2A (Overcurrent Protection),C110015,0.15
+Y1,1,11.0592MHz,HC49S,NDK,NX5032GA-11.0592M,Crystal 11.0592MHz (MCU Clock),C110020,0.50
+**Total BOM Cost**,,,,,,,**9.11**
