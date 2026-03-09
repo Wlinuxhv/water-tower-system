@@ -1,4 +1,4 @@
-name: Embedded CI - STC8G Build
+name: Embedded CI - STC8G Windows Build
 
 on:
   push:
@@ -15,37 +15,99 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 检测 Runner 状态
-  check-runner:
+  # 检测 Windows Runner 环境
+  check-windows-runner:
     runs-on: self-hosted
     outputs:
-      os: ${{ steps.check.outputs.os }}
-      arch: ${{ steps.check.outputs.arch }}
+      sdcc-version: ${{ steps.check-sdcc.outputs.version }}
+      sdcc-path: ${{ steps.check-sdcc.outputs.path }}
+      runner-name: ${{ steps.check-runner.outputs.name }}
     steps:
     - name: 检查 Runner 信息
-      id: check
+      id: check-runner
       run: |
-        echo "Runner OS: ${{ runner.os }}"
-        echo "Runner Arch: ${{ runner.arch }}"
-        echo "Runner Name: ${{ runner.name }}"
-        echo "OS 信息:"
-        if [ "${{ runner.os }}" = "Windows" ]; then
-          systeminfo | head -20
-          echo "os=Windows" >> $GITHUB_OUTPUT
-        elif [ "${{ runner.os }}" = "Linux" ]; then
-          uname -a
-          cat /etc/os-release
-          echo "os=Linux" >> $GITHUB_OUTPUT
-        elif [ "${{ runner.os }}" = "macOS" ]; then
-          sw_vers
-          echo "os=macOS" >> $GITHUB_OUTPUT
-        fi
-        echo "arch=x64" >> $GITHUB_OUTPUT
+        Write-Host "=== Runner 信息 ==="
+        Write-Host "Runner OS: ${{ runner.os }}"
+        Write-Host "Runner Name: ${{ runner.name }}"
+        Write-Host "Runner Arch: ${{ runner.arch }}"
+        Write-Host "Number of CPUs: $env:NUMBER_OF_PROCESSORS"
+        Write-Host "OS Name: $(Get-CimInstance Win32_OperatingSystem).Caption"
+        Write-Host "OS Version: $(Get-CimInstance Win32_OperatingSystem).Version"
+        Write-Host "Total Memory: $([math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize/1MB, 2)) GB"
+        Write-Host "name=${{ runner.name }}" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+      
+    - name: 检查 SDCC 安装
+      id: check-sdcc
+      run: |
+        Write-Host "=== 检查 SDCC 安装 ==="
+        
+        # SDCC 安装路径
+        $sdccPath = "C:\Program Files\SDCC"
+        $sdccBin = "$sdccPath\bin"
+        $sdccExe = "$sdccBin\sdcc.exe"
+        
+        Write-Host "检查路径：$sdccPath"
+        
+        if (Test-Path $sdccPath) {
+          Write-Host "✅ SDCC 目录存在"
+          
+          # 添加到 PATH
+          $env:Path = "$sdccBin;$env:Path"
+          echo "$sdccBin" >> $env:GITHUB_PATH
+          
+          # 验证 SDCC
+          if (Test-Path $sdccExe) {
+            Write-Host "✅ sdcc.exe 存在"
+            $version = & $sdccExe -v 2>&1 | Select-String "SDCC" | Select-Object -First 1
+            Write-Host "SDCC 版本：$version"
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+            echo "path=$sdccBin" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "❌ sdcc.exe 不存在"
+            exit 1
+          }
+        } else {
+          Write-Host "❌ SDCC 目录不存在：$sdccPath"
+          Write-Host "请确认 SDCC 已正确安装"
+          exit 1
+        }
+        
+        # 检查其他工具
+        Write-Host "`n=== 检查其他工具 ==="
+        
+        # objcopy
+        if (Get-Command objcopy -ErrorAction SilentlyContinue) {
+          Write-Host "✅ objcopy 已安装"
+          objcopy --version | Select-Object -First 1
+        } else {
+          Write-Host "⚠️ objcopy 未安装 (可使用 packihx 替代)"
+        }
+        
+        # packihx (SDCC 自带)
+        $packihxExe = "$sdccBin\packihx.exe"
+        if (Test-Path $packihxExe) {
+          Write-Host "✅ packihx 已安装 (SDCC 自带)"
+        } else {
+          Write-Host "⚠️ packihx 未找到"
+        }
+        
+        # Git
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Git 已安装"
+          git --version
+        } else {
+          Write-Host "❌ Git 未安装"
+          exit 1
+        }
+        
+        Write-Host "`n✅ 环境检查完成!"
+      shell: pwsh
 
   # ESP8266 编译 (使用 Ubuntu)
   esp8266:
     runs-on: ubuntu-latest
-    needs: check-runner
+    needs: check-windows-runner
     
     steps:
     - name: 检出代码
@@ -69,122 +131,234 @@ jobs:
         path: esp8266_master/.pio/build/nodemcuv2/firmware.bin
         retention-days: 30
 
-  # STC8G1K08 编译 (使用 Windows Self-Hosted Runner)
+  # STC8G1K08 编译 (Windows Self-Hosted Runner)
   stc8g-windows:
     runs-on: self-hosted
-    needs: check-runner
-    if: needs.check-runner.outputs.os == 'Windows'
+    needs: check-windows-runner
     
     steps:
     - name: 检出代码
       uses: actions/checkout@v4
       
-    - name: 检查环境
+    - name: 配置 SDCC 路径
       run: |
-        Write-Host "=== 检查构建环境 ==="
-        Write-Host "当前目录：$(pwd)"
-        Write-Host "PowerShell 版本：$PSVersionTable.PSVersion"
+        # 添加 SDCC 到 PATH
+        $sdccBin = "C:\Program Files\SDCC\bin"
+        $env:Path = "$sdccBin;$env:Path"
+        echo "$sdccBin" >> $env:GITHUB_PATH
         
-        # 检查 SDCC
-        if (Get-Command sdcc -ErrorAction SilentlyContinue) {
-          Write-Host "✅ SDCC 已安装"
-          sdcc -v
-        } else {
-          Write-Host "❌ SDCC 未安装"
-          Write-Host "请安装 SDCC: choco install sdcc"
-          exit 1
-        }
+        Write-Host "✅ SDCC 路径已配置"
+        Write-Host "PATH: $sdccBin"
         
-        # 检查 GNU tools
-        if (Get-Command objcopy -ErrorAction SilentlyContinue) {
-          Write-Host "✅ objcopy 已安装"
-          objcopy --version | Select-Object -First 1
-        } else {
-          Write-Host "⚠️ objcopy 未安装，尝试使用 SDCC 自带工具"
-        }
-        
+        # 验证
+        sdcc -v
       shell: pwsh
       
-    - name: 配置 SDCC 路径 (如果需要)
+    - name: 检查源文件
       run: |
-        # 如果 SDCC 在 Chocolatey 默认路径
-        $sdccPath = "C:\ProgramData\chocolatey\lib\sdcc\tools\sdcc\bin"
-        if (Test-Path $sdccPath) {
-          Write-Host "添加 SDCC 路径到 PATH"
-          $env:Path = "$sdccPath;$env:Path"
-          echo "$sdccPath" >> $env:GITHUB_PATH
+        Write-Host "=== 检查源文件 ==="
+        $files = @(
+          "slave_node_stc8g/src/main.c",
+          "slave_node_stc8g/src/pan3031.c",
+          "slave_node_stc8g/src/sc09b.c"
+        )
+        
+        foreach ($file in $files) {
+          if (Test-Path $file) {
+            $size = (Get-Item $file).Length
+            Write-Host "✅ $file ($size 字节)"
+          } else {
+            Write-Host "❌ 文件不存在：$file"
+            exit 1
+          }
+        }
+        
+        # 检查头文件
+        $headers = @(
+          "slave_node_stc8g/inc/slave_config.h",
+          "slave_node_stc8g/inc/pan3031.h"
+        )
+        
+        foreach ($header in $headers) {
+          if (Test-Path $header) {
+            Write-Host "✅ $header"
+          } else {
+            Write-Host "⚠️ 头文件不存在：$header"
+          }
         }
       shell: pwsh
       
     - name: 编译 STC8G1K08
-      working-directory: slave_node_stc8g
+      id: compile
       run: |
         Write-Host "=== 开始编译 STC8G1K08 ==="
-        Write-Host "SDCC 版本:"
-        sdcc -v
         
-        # 清理
-        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-        if (Test-Path "output") { Remove-Item -Recurse -Force "output" }
-        New-Item -ItemType Directory -Path "build" | Out-Null
-        New-Item -ItemType Directory -Path "output" | Out-Null
+        # 设置 SDCC 路径
+        $sdccBin = "C:\Program Files\SDCC\bin"
+        $env:Path = "$sdccBin;$env:Path"
         
-        # 编译
-        Write-Host "编译源文件..."
-        $sources = @("src/main.c", "src/pan3031.c", "src/sc09b.c")
+        # 创建输出目录
+        $buildDir = "slave_node_stc8g/build"
+        $outDir = "slave_node_stc8g/output"
+        
+        if (Test-Path $buildDir) { Remove-Item -Recurse -Force $buildDir }
+        if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
+        New-Item -ItemType Directory -Path $buildDir | Out-Null
+        New-Item -ItemType Directory -Path $outDir | Out-Null
+        
+        Write-Host "输出目录已创建"
+        Write-Host "  - $buildDir"
+        Write-Host "  - $outDir"
+        
+        # 编译参数
+        $cflags = @(
+          "-mmcs51",
+          "--model-small",
+          "--opt-code-size",
+          "--no-xinit-opt",
+          "--int-long-reent",
+          "--std-sdcc99",
+          "--all-callee-saves"
+        )
+        
+        Write-Host "`n编译参数：$($cflags -join ' ')"
+        
+        # 编译源文件
+        $sources = @(
+          "slave_node_stc8g/src/main.c",
+          "slave_node_stc8g/src/pan3031.c",
+          "slave_node_stc8g/src/sc09b.c"
+        )
+        
         $objects = @()
+        Write-Host "`n=== 编译源文件 ==="
         
         foreach ($src in $sources) {
-          $obj = "build/" + ([System.IO.Path]::GetFileNameWithoutExtension($src)) + ".rel"
-          Write-Host "编译：$src -> $obj"
-          sdcc -mmcs51 --model-small --opt-code-size -c $src -o $obj
+          $objName = [System.IO.Path]::GetFileNameWithoutExtension($src)
+          $obj = "$buildDir\$objName.rel"
+          
+          Write-Host "`n编译：$src"
+          Write-Host "  → $obj"
+          
+          $args = $cflags + @("-c", $src, "-o", $obj)
+          Write-Host "  命令：sdcc $($args -join ' ')"
+          
+          $output = & sdcc $args 2>&1
+          
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "编译失败：$src"
+            Write-Host "❌ 编译失败!"
+            Write-Host $output
             exit 1
           }
-          $objects += $obj
+          
+          if (Test-Path $obj) {
+            $size = (Get-Item $obj).Length
+            Write-Host "✅ 编译成功 ($size 字节)"
+            $objects += $obj
+          } else {
+            Write-Host "❌ 输出文件不存在：$obj"
+            exit 1
+          }
         }
         
         # 链接
-        Write-Host "链接..."
-        sdcc -mmcs51 --model-small $objects -o output/water_slave_stc8g.ihx
+        Write-Host "`n=== 链接 ==="
+        $ihx = "$outDir/water_slave_stc8g.ihx"
+        
+        Write-Host "链接目标文件:"
+        foreach ($obj in $objects) {
+          Write-Host "  - $obj"
+        }
+        
+        $linkArgs = $cflags + $objects + @("-o", $ihx)
+        Write-Host "命令：sdcc $($linkArgs -join ' ')"
+        
+        $output = & sdcc $linkArgs 2>&1
+        
         if ($LASTEXITCODE -ne 0) {
-          Write-Error "链接失败"
+          Write-Host "❌ 链接失败!"
+          Write-Host $output
           exit 1
         }
         
-        # 生成 HEX
-        Write-Host "生成 HEX 文件..."
-        if (Get-Command objcopy -ErrorAction SilentlyContinue) {
-          objcopy -I ihex -O ihx output/water_slave_stc8g.ihx output/water_slave_stc8g.hex
+        if (Test-Path $ihx) {
+          $size = (Get-Item $ihx).Length
+          Write-Host "✅ 链接成功 ($size 字节)"
         } else {
-          # 直接使用 ihx 文件作为 hex
-          Copy-Item "output/water_slave_stc8g.ihx" "output/water_slave_stc8g.hex"
+          Write-Host "❌ IHX 文件不存在"
+          exit 1
         }
         
-        # 生成 BIN
-        Write-Host "生成 BIN 文件..."
+        # 生成 HEX 文件
+        Write-Host "`n=== 生成 HEX 文件 ==="
+        $hexFile = "$outDir/water_slave_stc8g.hex"
+        
+        # 尝试使用 objcopy
         if (Get-Command objcopy -ErrorAction SilentlyContinue) {
-          objcopy -I ihex -O binary output/water_slave_stc8g.ihx output/water_slave_stc8g.bin
+          Write-Host "使用 objcopy 转换..."
+          objcopy -I ihex -O ihex $ihx $hexFile
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ objcopy 转换成功"
+          } else {
+            Write-Host "⚠️ objcopy 失败，使用 packihx"
+            & "$sdccBin\packihx.exe" $ihx > $hexFile
+          }
+        } else {
+          # 使用 packihx
+          Write-Host "使用 packihx 转换..."
+          & "$sdccBin\packihx.exe" $ihx > $hexFile
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ packihx 转换成功"
+          } else {
+            Write-Host "⚠️ packihx 失败，直接复制"
+            Copy-Item $ihx $hexFile
+          }
+        }
+        
+        # 生成 BIN 文件
+        Write-Host "`n=== 生成 BIN 文件 ==="
+        $binFile = "$outDir/water_slave_stc8g.bin"
+        
+        if (Get-Command objcopy -ErrorAction SilentlyContinue) {
+          Write-Host "使用 objcopy 生成 BIN..."
+          objcopy -I ihex -O binary $ihx $binFile
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ BIN 文件生成成功"
+          }
+        } else {
+          Write-Host "⚠️ objcopy 不可用，跳过 BIN 生成"
         }
         
         # 显示结果
         Write-Host "`n=== 编译完成 ==="
         Write-Host "输出文件:"
-        Get-ChildItem output | Select-Object Name, Length, LastWriteTime
+        Get-ChildItem $outDir | ForEach-Object {
+          Write-Host "  $($_.Name) - $($_.Length) 字节"
+        }
         
-        # 检查大小
-        $hexFile = "output/water_slave_stc8g.hex"
+        # 验证代码大小
+        Write-Host "`n=== 代码大小验证 ==="
         if (Test-Path $hexFile) {
-          $size = (Get-Item $hexFile).Length
-          Write-Host "HEX 文件大小：$size 字节"
-          if ($size -gt 8192) {
-            Write-Warning "⚠️ 代码大小超过 STC8G1K08 的 8KB Flash 限制!"
-            exit 1
+          $hexSize = (Get-Item $hexFile).Length
+          Write-Host "HEX 文件大小：$hexSize 字节"
+          Write-Host "STC8G1K08 Flash 容量：8192 字节"
+          
+          if ($hexSize -le 8192) {
+            $percent = [math]::Round(($hexSize / 8192) * 100, 2)
+            Write-Host "✅ 代码大小在限制范围内 ($percent%)"
           } else {
-            Write-Host "✅ 代码大小在限制范围内 (8KB)"
+            $exceed = $hexSize - 8192
+            Write-Host "❌ 代码超出限制 $exceed 字节!"
+            exit 1
           }
         }
+        
+        # 输出信息
+        Write-Host "`n✅ STC8G1K08 编译成功!"
+        Write-Host "产物位置：$outDir"
       shell: pwsh
       
     - name: 上传 HEX 文件
@@ -197,45 +371,17 @@ jobs:
           slave_node_stc8g/output/water_slave_stc8g.ihx
         retention-days: 30
         
-    - name: 上传烧录文件 (用于 STC-ISP)
+    - name: 上传烧录文件包
       uses: actions/upload-artifact@v4
       with:
         name: stc8g-flash-files
         path: slave_node_stc8g/output/
         retention-days: 7
 
-  # STC8G1K08 编译 (备用：使用 Ubuntu)
-  stc8g-ubuntu:
-    runs-on: ubuntu-latest
-    needs: check-runner
-    if: needs.check-runner.outputs.os != 'Windows'
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 安装 SDCC
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y sdcc binutils
-        
-    - name: 编译 STC8G
-      working-directory: slave_node_stc8g
-      run: |
-        make clean
-        make
-        
-    - name: 上传 HEX 文件
-      uses: actions/upload-artifact@v4
-      with:
-        name: stc8g-hex-ubuntu
-        path: slave_node_stc8g/output/water_slave_stc8g.hex
-        retention-days: 30
-
-  # STC32G 编译 (备用)
+  # STC32G 编译 (Ubuntu)
   stc32g:
     runs-on: ubuntu-latest
-    needs: check-runner
+    needs: check-windows-runner
     
     steps:
     - name: 检出代码
@@ -259,83 +405,52 @@ jobs:
         path: slave_node/build/main.hex
         retention-days: 30
 
-  # 代码检查
-  lint:
-    runs-on: ubuntu-latest
-    needs: check-runner
-    continue-on-error: true
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-      
-    - name: 检查 C/C++ 代码
-      run: |
-        sudo apt-get install -y cppcheck
-        cppcheck --enable=warning --inconclusive --error-exitcode=0 \
-          esp8266_master/src/ \
-          slave_node/src/ \
-          slave_node_stc8g/src/ \
-          --suppress=missingIncludeSystem \
-          --suppress=unusedFunction \
-          --suppress=unusedVariable \
-          -i slave_node/src/pan3031.c \
-          -i slave_node_stc8g/src/pan3031.c \
-          --template='{file}:{line} {severity} {id} {message}'
-
   # 构建总结
-  summary:
-    runs-on: ubuntu-latest
-    needs: [check-runner, esp8266, stc8g-windows, stc8g-ubuntu, stc32g, lint]
+  build-summary:
+    runs-on: self-hosted
+    needs: [check-windows-runner, esp8266, stc8g-windows, stc32g]
     if: always()
     
     steps:
     - name: 生成构建总结
       run: |
-        echo "## 📊 嵌入式构建总结" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| 项目 | 状态 | 产物 |" >> $GITHUB_STEP_SUMMARY
-        echo "|------|------|------|" >> $GITHUB_STEP_SUMMARY
+        Write-Host "## 📊 嵌入式构建总结" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         
-        # ESP8266
-        esp_status="${{ needs.esp8266.result }}"
-        if [ "$esp_status" = "success" ]; then
-          echo "| ESP8266 | ✅ 成功 | firmware.bin |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$esp_status" = "failure" ]; then
-          echo "| ESP8266 | ❌ 失败 | - |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| ESP8266 | ⚠️ $esp_status | - |" >> $GITHUB_STEP_SUMMARY
-        fi
+        Write-Host "### Runner 信息" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- 名称：${{ needs.check-windows-runner.outputs.runner-name }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- OS: Windows 10" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- SDCC: ${{ needs.check-windows-runner.outputs.sdcc-version }}" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         
-        # STC8G Windows
-        stc8g_win_status="${{ needs.stc8g-windows.result }}"
-        if [ "$stc8g_win_status" = "success" ]; then
-          echo "| STC8G (Windows) | ✅ 成功 | water_slave_stc8g.hex |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$stc8g_win_status" = "skipped" ]; then
-          echo "| STC8G (Windows) | ⏭️ 跳过 | - |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$stc8g_win_status" = "failure" ]; then
-          echo "| STC8G (Windows) | ❌ 失败 | - |" >> $GITHUB_STEP_SUMMARY
-        fi
+        Write-Host "### 构建状态" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "| 项目 | 状态 | 产物 |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "|------|------|------|" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         
-        # STC8G Ubuntu
-        stc8g_ubu_status="${{ needs.stc8g-ubuntu.result }}"
-        if [ "$stc8g_ubu_status" = "success" ]; then
-          echo "| STC8G (Ubuntu) | ✅ 成功 | water_slave_stc8g.hex |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$stc8g_ubu_status" = "skipped" ]; then
-          echo "| STC8G (Ubuntu) | ⏭️ 跳过 | - |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$stc8g_ubu_status" = "failure" ]; then
-          echo "| STC8G (Ubuntu) | ❌ 失败 | - |" >> $GITHUB_STEP_SUMMARY
-        fi
+        $espStatus = "${{ needs.esp8266.result }}"
+        $stc8gStatus = "${{ needs.stc8g-windows.result }}"
+        $stc32gStatus = "${{ needs.stc32g.result }}"
         
-        # STC32G
-        stc32g_status="${{ needs.stc32g.result }}"
-        if [ "$stc32g_status" = "success" ]; then
-          echo "| STC32G | ✅ 成功 | main.hex |" >> $GITHUB_STEP_SUMMARY
-        elif [ "$stc32g_status" = "failure" ]; then
-          echo "| STC32G | ❌ 失败 | - |" >> $GITHUB_STEP_SUMMARY
-        fi
+        if ($espStatus -eq "success") {
+          Write-Host "| ESP8266 | ✅ 成功 | firmware.bin |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        } else {
+          Write-Host "| ESP8266 | ❌ $espStatus | - |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        }
         
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Runner 信息" >> $GITHUB_STEP_SUMMARY
-        echo "- OS: ${{ needs.check-runner.outputs.os }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Arch: ${{ needs.check-runner.outputs.arch }}" >> $GITHUB_STEP_SUMMARY
+        if ($stc8gStatus -eq "success") {
+          Write-Host "| STC8G1K08 | ✅ 成功 | water_slave_stc8g.hex |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        } else {
+          Write-Host "| STC8G1K08 | ❌ $stc8gStatus | - |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        }
+        
+        if ($stc32gStatus -eq "success") {
+          Write-Host "| STC32G | ✅ 成功 | main.hex |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        } else {
+          Write-Host "| STC32G | ❌ $stc32gStatus | - |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        }
+        
+        Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "### 下载产物" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- [stc8g-hex-windows](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        Write-Host "- [esp8266-firmware](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+      shell: pwsh
