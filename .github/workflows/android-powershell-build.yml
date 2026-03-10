@@ -1,0 +1,138 @@
+name: Android Build - PowerShell
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: 检查环境
+      run: |
+        Write-Host "=== 检查环境 ==="
+        Write-Host "Runner: $env:RUNNER_NAME"
+        Write-Host "OS: Windows"
+        
+        # 检查 Java
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Java 已安装"
+          java -version 2>&1 | Select-Object -First 1
+        } else {
+          Write-Host "❌ Java 未安装"
+        }
+        
+        # 检查 Android SDK
+        if ($env:ANDROID_HOME) {
+          Write-Host "✅ ANDROID_HOME: $env:ANDROID_HOME"
+        } else {
+          Write-Host "❌ ANDROID_HOME 未设置"
+          # 尝试查找
+          $paths = @(
+            "C:\Android\android-sdk",
+            "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk",
+            "C:\Program Files\Android\android-sdk"
+          )
+          foreach ($p in $paths) {
+            if (Test-Path $p) {
+              Write-Host "  找到 SDK: $p"
+              [Environment]::SetEnvironmentVariable("ANDROID_HOME", $p, "Process")
+              break
+            }
+          }
+        }
+        
+        # 检查 Gradle Wrapper
+        if (Test-Path "android_app\gradlew.bat") {
+          Write-Host "✅ Gradle Wrapper 存在"
+        } else {
+          Write-Host "❌ Gradle Wrapper 不存在"
+        }
+      shell: powershell
+      
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 编译 APK
+      working-directory: android_app
+      shell: powershell
+      run: |
+        Write-Host "=== 开始编译 ==="
+        
+        # 设置 ANDROID_HOME 如果未设置
+        if (-not $env:ANDROID_HOME) {
+          $sdkPaths = @(
+            "C:\Android\android-sdk",
+            "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk"
+          )
+          foreach ($p in $sdkPaths) {
+            if (Test-Path $p) {
+              $env:ANDROID_HOME = $p
+              Write-Host "设置 ANDROID_HOME: $p"
+              break
+            }
+          }
+        }
+        
+        # 创建 local.properties
+        if ($env:ANDROID_HOME) {
+          "sdk.dir=$env:ANDROID_HOME" | Out-File -FilePath local.properties -Encoding ASCII
+          Write-Host "创建 local.properties"
+          Get-Content local.properties
+        }
+        
+        # 清理
+        if (Test-Path "app\build") { Remove-Item -Recurse -Force "app\build" }
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        Write-Host "清理完成"
+        
+        # 编译
+        Write-Host "执行：gradlew.bat assembleDebug"
+        .\gradlew.bat assembleDebug --no-daemon --stacktrace
+        
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "✅ 编译成功!"
+        } else {
+          Write-Host "❌ 编译失败!"
+          exit 1
+        }
+      
+    - name: 查找 APK
+      id: apk
+      shell: powershell
+      run: |
+        Write-Host "=== 查找 APK ==="
+        $apk = Get-ChildItem -Recurse -Filter "*.apk" -Path "app\build\outputs\apk\debug" | 
+               Sort-Object LastWriteTime -Descending | 
+               Select-Object -First 1
+        
+        if ($apk) {
+          $sizeMB = [math]::Round($apk.Length / 1MB, 2)
+          Write-Host "✅ 找到：$($apk.Name)"
+          Write-Host "   大小：$sizeMB MB"
+          
+          echo "apk-path=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+          echo "apk-name=$($apk.Name)" >> $env:GITHUB_OUTPUT
+          echo "apk-size=$sizeMB" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "❌ 未找到 APK"
+          exit 1
+        }
+      
+    - name: 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-powershell
+        path: ${{ steps.apk.outputs.apk-path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      shell: powershell
+      run: |
+        Write-Host "`n================================"
+        Write-Host "  🎉 构建完成!"
+        Write-Host "================================"
+        Write-Host "APK: ${{ steps.apk.outputs.apk-name }}"
+        Write-Host "大小：${{ steps.apk.outputs.apk-size }} MB"
+        Write-Host "下载：https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        Write-Host "================================`n"
