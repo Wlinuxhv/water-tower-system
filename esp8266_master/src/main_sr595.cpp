@@ -343,9 +343,10 @@ void loop() {
 
 void handle_network_comm() {
     uint8_t rx_data[8];
-    uint8_t len = pan3031_receive(rx_data, 8);
+    uint8_t len = 0;
+    bool ok = pan3031_receive(rx_data, &len);
     
-    if (len < 4) return;
+    if (!ok || len < 4) return;
     
     // 处理传感器数据
     if (rx_data[1] == CMD_QUERY) {
