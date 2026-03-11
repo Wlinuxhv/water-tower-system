@@ -43,6 +43,9 @@
 typedef unsigned char uint8_t;
 typedef unsigned int uint16_t;
 typedef unsigned long uint32_t;
-typedef bit bool;
+// SDCC 中 bit 是关键字，直接使用
+typedef unsigned char bool;
+#define true  1
+#define false 0
 
 #endif
