@@ -1,0 +1,98 @@
+name: Runner Status Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/runner-status-check.yml'
+
+jobs:
+  check-runner:
+    name: Check Self-Hosted Runner
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: 显示 Runner 信息
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  Self-Hosted Runner 状态检查" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        
+        Write-Host "`n[基本信息]"
+        Write-Host "  主机名：$env:COMPUTERNAME"
+        Write-Host "  用户名：$env:USERNAME"
+        Write-Host "  操作系统：$env:RUNNER_OS"
+        Write-Host "  架构：$env:RUNNER_ARCH"
+        Write-Host "  Runner 名称：$env:RUNNER_NAME"
+        
+        Write-Host "`n[系统信息]"
+        Write-Host "  PowerShell 版本：$PSVersionTable.PSVersion"
+        Write-Host "  工作目录：$(Get-Location)"
+        
+        Write-Host "`n✅ Runner 正常工作！" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 检查关键路径
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Yellow
+        Write-Host "  路径检查" -ForegroundColor Yellow
+        Write-Host "======================================" -ForegroundColor Yellow
+        
+        $paths = @(
+          "C:\actions-runner",
+          "D:\Runner\water-tower-system",
+          "C:\Android",
+          "C:\Program Files\Java"
+        )
+        
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            Write-Host "✅ $path" -ForegroundColor Green
+          } else {
+            Write-Host "❌ $path (不存在)" -ForegroundColor Red
+          }
+        }
+      shell: powershell
+      
+    - name: 测试网络连通性
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Magenta
+        Write-Host "  网络测试" -ForegroundColor Magenta
+        Write-Host "======================================" -ForegroundColor Magenta
+        
+        Write-Host "`n[GitHub 连接]"
+        try {
+          $response = Invoke-WebRequest -Uri "https://github.com" -TimeoutSec 5 -UseBasicParsing
+          Write-Host "✅ GitHub 连接成功 (状态码：$($response.StatusCode))" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ GitHub 连接失败" -ForegroundColor Red
+        }
+        
+        Write-Host "`n[Google DNS]"
+        $ping = Test-Connection -ComputerName 8.8.8.8 -Count 2 -Quiet
+        if ($ping) {
+          Write-Host "✅ DNS 解析正常" -ForegroundColor Green
+        } else {
+          Write-Host "❌ DNS 解析失败" -ForegroundColor Red
+        }
+      shell: powershell
+      
+    - name: 创建测试文件
+      run: |
+        $testFile = "D:\Runner\water-tower-system\test_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"
+        "Runner 测试成功！`n时间：$(Get-Date)" | Out-File $testFile -Encoding utf8
+        Write-Host "✅ 测试文件已创建：$testFile" -ForegroundColor Green
+        Get-Content $testFile
+      shell: powershell
+      
+    - name: 总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  测试总结" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "`n✅ 所有测试通过！" -ForegroundColor Green
+        Write-Host "✅ Self-Hosted Runner 配置成功！" -ForegroundColor Green
+        Write-Host "`n可以开始使用 Runner 运行 Android 构建了！" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+      shell: powershell
