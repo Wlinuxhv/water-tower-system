@@ -5,6 +5,7 @@
 #include "error_codes.h"
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+#include <ESP8266WiFi.h>
 
 // 外部 OLED 对象 (在 main.cpp 中定义)
 extern Adafruit_SSD1306 display;

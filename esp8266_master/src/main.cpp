@@ -276,7 +276,7 @@ void handle_network_comm() {
                 uint8_t idx = find_tower(src_id);
                 if (idx < MAX_TOWERS) {
                     towers[idx].water_level = rx_data[3];
-                    towers[idx].well_water_ok = (rx_data[4] & 0x02) >> 1;
+                    // // towers[idx].well_water_ok = (rx_data[4] & 0x02) >> 1;  // 井水状态是全局的  // 井水状态是全局的，不是每个水塔的
                     towers[idx].pump_on = rx_data[4] & 0x01;
                     towers[idx].online = true;
                     towers[idx].last_update = millis();
