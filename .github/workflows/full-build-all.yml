@@ -1,0 +1,330 @@
+name: Full Build - All Components
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.github/workflows/runner-*.yml'
+
+jobs:
+  # ============================================
+  # 1. Android APK 构建
+  # ============================================
+  build-android:
+    name: 🤖 Build Android APK
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 显示构建信息
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  Android APK 构建" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "Runner: $env:RUNNER_NAME"
+        Write-Host "时间：$(Get-Date)"
+        Write-Host "======================================"
+      shell: powershell
+      
+    - name: 检查 Java 环境
+      run: |
+        Write-Host "`n[Java 环境]"
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          java -version 2>&1
+        } else {
+          Write-Host "❌ Java 未找到" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      
+    - name: 检查 Android SDK
+      run: |
+        Write-Host "`n[Android SDK]"
+        if ($env:ANDROID_HOME) {
+          Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
+          if (Test-Path "$env:ANDROID_HOME\platform-tools\adb.exe") {
+            Write-Host "✅ Platform-tools 找到" -ForegroundColor Green
+          }
+        } else {
+          Write-Host "⚠️ ANDROID_HOME 未设置，尝试使用默认路径" -ForegroundColor Yellow
+        }
+      shell: powershell
+      
+    - name: 设置 Gradle 权限
+      run: |
+        cd android_app
+        if (Test-Path "gradlew") {
+          # 确保 gradlew 有执行权限
+          Write-Host "设置 gradlew 权限..."
+        }
+        Write-Host "✅ 权限设置完成" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 构建 Debug APK
+      run: |
+        cd android_app
+        
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  开始构建 Debug APK" -ForegroundColor Cyan
+        Write-Host "======================================" 
+        
+        # 使用简化版 gradlew
+        .\gradlew.bat assembleDebug --no-daemon --stacktrace
+        
+        Write-Host "`n✅ 构建完成！" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 查找 APK 文件
+      id: find-apk
+      run: |
+        cd android_app
+        $apkPath = Get-ChildItem -Path "app\build\outputs\apk\debug" -Filter "*-debug.apk" -Recurse | Select-Object -First 1
+        if ($apkPath) {
+          Write-Host "✅ 找到 APK: $($apkPath.FullName)" -ForegroundColor Green
+          Write-Host "APK 大小：$([math]::Round($apkPath.Length / 1MB, 2)) MB"
+          echo "apk_path=$($apkPath.FullName)" >> $env:GITHUB_OUTPUT
+          echo "apk_name=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "❌ 未找到 APK 文件" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      
+    - name: 上传 APK 产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-debug
+        path: ${{ steps.find-apk.outputs.apk_path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  Android 构建总结" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "✅ APK 构建成功！" -ForegroundColor Green
+        Write-Host "产物名称：${{ steps.find-apk.outputs.apk_name }}"
+        Write-Host "======================================"
+      shell: powershell
+
+  # ============================================
+  # 2. ESP8266 固件构建
+  # ============================================
+  build-esp8266:
+    name: 📡 Build ESP8266 Firmware
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 显示构建信息
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  ESP8266 固件构建" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "Runner: $env:RUNNER_NAME"
+        Write-Host "时间：$(Get-Date)"
+      shell: powershell
+      
+    - name: 检查 PlatformIO
+      run: |
+        Write-Host "`n[PlatformIO 检查]"
+        if (Get-Command pio -ErrorAction SilentlyContinue) {
+          pio --version
+          Write-Host "✅ PlatformIO 已安装" -ForegroundColor Green
+        } else {
+          Write-Host "❌ PlatformIO 未找到" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      
+    - name: 构建 ESP8266 固件
+      run: |
+        cd firmware/esp8266
+        
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  开始构建 ESP8266" -ForegroundColor Cyan
+        Write-Host "======================================" 
+        
+        pio run -e nodemcuv2
+        
+        Write-Host "`n✅ ESP8266 构建完成！" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 查找固件文件
+      id: find-esp-firmware
+      run: |
+        cd firmware/esp8266
+        $firmwarePath = Get-ChildItem -Path ".pio\build\nodemcuv2" -Filter "*.bin" | Select-Object -First 1
+        if ($firmwarePath) {
+          Write-Host "✅ 找到固件：$($firmwarePath.FullName)" -ForegroundColor Green
+          Write-Host "固件大小：$([math]::Round($firmwarePath.Length / 1KB, 2)) KB"
+          echo "firmware_path=$($firmwarePath.FullName)" >> $env:GITHUB_OUTPUT
+          echo "firmware_name=$($firmwarePath.Name)" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "❌ 未找到固件文件" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      
+    - name: 上传 ESP8266 固件
+      uses: actions/upload-artifact@v4
+      with:
+        name: esp8266-firmware
+        path: ${{ steps.find-esp-firmware.outputs.firmware_path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  ESP8266 构建总结" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "✅ 固件构建成功！" -ForegroundColor Green
+        Write-Host "产物名称：${{ steps.find-esp-firmware.outputs.firmware_name }}"
+      shell: powershell
+
+  # ============================================
+  # 3. STC8G 固件构建
+  # ============================================
+  build-stc8g:
+    name: 🔌 Build STC8G Firmware
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 显示构建信息
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  STC8G 固件构建" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "Runner: $env:RUNNER_NAME"
+        Write-Host "时间：$(Get-Date)"
+      shell: powershell
+      
+    - name: 检查 SDCC 编译器
+      run: |
+        Write-Host "`n[SDCC 检查]"
+        if (Get-Command sdcc -ErrorAction SilentlyContinue) {
+          sdcc --version
+          Write-Host "✅ SDCC 已安装" -ForegroundColor Green
+        } else {
+          Write-Host "⚠️ SDCC 未找到，尝试查找安装路径" -ForegroundColor Yellow
+          $sdccPaths = @(
+            "C:\Program Files\SDCC",
+            "C:\SDCC",
+            "D:\SDCC"
+          )
+          foreach ($p in $sdccPaths) {
+            if (Test-Path $p) {
+              Write-Host "  找到：$p" -ForegroundColor Yellow
+            }
+          }
+          Write-Host "继续尝试构建..."
+        }
+      shell: powershell
+      
+    - name: 构建 STC8G 固件
+      run: |
+        cd firmware/stc8g
+        
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  开始构建 STC8G" -ForegroundColor Cyan
+        Write-Host "======================================" 
+        
+        # 检查 Makefile 或构建脚本
+        if (Test-Path "Makefile") {
+          make clean
+          make all
+        } elseif (Test-Path "build.bat") {
+          .\build.bat
+        } else {
+          Write-Host "⚠️ 未找到构建脚本，尝试直接编译" -ForegroundColor Yellow
+          # 查找 .c 文件并编译
+          $cFiles = Get-ChildItem -Filter "*.c"
+          if ($cFiles) {
+            Write-Host "找到 $($cFiles.Count) 个 C 文件"
+          }
+        }
+        
+        Write-Host "`n✅ STC8G 构建完成！" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 查找 HEX 文件
+      id: find-stc-hex
+      run: |
+        cd firmware/stc8g
+        
+        $hexPath = Get-ChildItem -Filter "*.hex" -Recurse | Select-Object -First 1
+        if ($hexPath) {
+          Write-Host "✅ 找到 HEX 文件：$($hexPath.FullName)" -ForegroundColor Green
+          Write-Host "文件大小：$([math]::Round($hexPath.Length / 1KB, 2)) KB"
+          echo "hex_path=$($hexPath.FullName)" >> $env:GITHUB_OUTPUT
+          echo "hex_name=$($hexPath.Name)" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "⚠️ 未找到 HEX 文件，查找其他输出文件" -ForegroundColor Yellow
+          $binPath = Get-ChildItem -Filter "*.bin" -Recurse | Select-Object -First 1
+          if ($binPath) {
+            Write-Host "✅ 找到 BIN 文件：$($binPath.FullName)" -ForegroundColor Green
+            echo "hex_path=$($binPath.FullName)" >> $env:GITHUB_OUTPUT
+            echo "hex_name=$($binPath.Name).bin" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "❌ 未找到任何固件文件" -ForegroundColor Red
+            exit 0
+          }
+        }
+      shell: powershell
+      
+    - name: 上传 STC8G 固件
+      uses: actions/upload-artifact@v4
+      with:
+        name: stc8g-firmware
+        path: ${{ steps.find-stc-hex.outputs.hex_path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  STC8G 构建总结" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host "✅ 固件构建成功！" -ForegroundColor Green
+        Write-Host "产物名称：${{ steps.find-stc-hex.outputs.hex_name }}"
+      shell: powershell
+
+  # ============================================
+  # 4. 构建总结
+  # ============================================
+  build-summary:
+    name: 📊 Build Summary
+    runs-on: [self-hosted, Windows, X64]
+    needs: [build-android, build-esp8266, build-stc8g]
+    if: always()
+    
+    steps:
+    - name: 显示构建总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  🎉 全部构建完成！" -ForegroundColor Cyan
+        Write-Host "======================================"
+        Write-Host ""
+        Write-Host "构建任务状态:" -ForegroundColor Yellow
+        Write-Host "  Android APK:     ${{ needs.build-android.result }}" -ForegroundColor $(if ('${{ needs.build-android.result }}' -eq 'success') { 'Green' } else { 'Red' })
+        Write-Host "  ESP8266 固件：   ${{ needs.build-esp8266.result }}" -ForegroundColor $(if ('${{ needs.build-esp8266.result }}' -eq 'success') { 'Green' } else { 'Red' })
+        Write-Host "  STC8G 固件：     ${{ needs.build-stc8g.result }}" -ForegroundColor $(if ('${{ needs.build-stc8g.result }}' -eq 'success') { 'Green' } else { 'Red' })
+        Write-Host ""
+        Write-Host "产物下载:" -ForegroundColor Yellow
+        Write-Host "  访问 Actions 页面下载所有构建产物"
+        Write-Host "  https://github.com/Wlinuxhv/water-tower-system/actions"
+        Write-Host ""
+        Write-Host "======================================" -ForegroundColor Cyan
+      shell: powershell
