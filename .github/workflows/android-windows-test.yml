@@ -35,7 +35,7 @@ jobs:
         } else {
           Write-Host "❌ Gradle Wrapper 不存在"
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 检出代码
       uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
           Write-Host "❌ 编译失败!"
           exit 1
         }
-      shell: pwsh
+      shell: powershell
       timeout-minutes: 30
       
     - name: 查找 APK
@@ -79,7 +79,7 @@ jobs:
           Write-Host "❌ 未找到 APK"
           exit 1
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 上传 APK
       uses: actions/upload-artifact@v4

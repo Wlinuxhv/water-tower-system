@@ -31,7 +31,7 @@ jobs:
         Write-Host "Total Memory: $mem GB"
         Write-Host "OS Name: $(Get-CimInstance Win32_OperatingSystem).Caption"
         Write-Host "OS Version: $(Get-CimInstance Win32_OperatingSystem).Version"
-      shell: pwsh
+      shell: powershell
       
     - name: 检查 Java 环境
       id: check-java
@@ -77,7 +77,7 @@ jobs:
         } else {
           Write-Host "❌ java 命令不可用"
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 检查 Android SDK
       id: check-android
@@ -131,7 +131,7 @@ jobs:
         } else {
           Write-Host "⚠️ adb 不可用"
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 检查 Gradle
       id: check-gradle
@@ -155,7 +155,7 @@ jobs:
         } else {
           Write-Host "⚠️ Gradle Wrapper 不存在"
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 检查项目结构
       run: |
@@ -184,7 +184,7 @@ jobs:
             Write-Host "  $_"
           }
         }
-      shell: pwsh
+      shell: powershell
 
   # Android APK 构建 (Windows)
   build-apk-windows:
@@ -236,7 +236,7 @@ jobs:
         Write-Host "✅ 环境变量已设置"
         Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
         Write-Host "JAVA_HOME: $env:JAVA_HOME"
-      shell: pwsh
+      shell: powershell
       
     - name: 授予 Gradle 执行权限
       working-directory: android_app
@@ -248,7 +248,7 @@ jobs:
           Write-Host "❌ gradlew.bat 不存在"
           exit 1
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 清理构建缓存
       working-directory: android_app
@@ -258,7 +258,7 @@ jobs:
         if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
         if (Test-Path ".gradle") { Remove-Item -Recurse -Force ".gradle" }
         Write-Host "✅ 清理完成"
-      shell: pwsh
+      shell: powershell
       
     - name: 下载 Gradle 依赖
       working-directory: android_app
@@ -267,7 +267,7 @@ jobs:
         .\gradlew.bat --version
         .\gradlew.bat tasks --all --quiet
         Write-Host "✅ 依赖下载完成"
-      shell: pwsh
+      shell: powershell
       timeout-minutes: 10
       
     - name: 编译 Debug APK
@@ -292,7 +292,7 @@ jobs:
           Write-Host "`n❌ 编译失败!"
           exit 1
         }
-      shell: pwsh
+      shell: powershell
       timeout-minutes: 30
       
     - name: 查找 APK 文件
@@ -323,7 +323,7 @@ jobs:
           Write-Host "❌ 未找到 APK 文件"
           exit 1
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 显示构建信息
       run: |
@@ -333,7 +333,7 @@ jobs:
         Write-Host "APK 大小：${{ steps.find-apk.outputs.apk-size }}"
         Write-Host "Runner: ${{ runner.name }}"
         Write-Host "构建时间：$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-      shell: pwsh
+      shell: powershell
       
     - name: 上传 APK
       uses: actions/upload-artifact@v4
@@ -367,7 +367,7 @@ jobs:
         
         $report | Out-File -FilePath "build-report.md" -Encoding UTF8
         Write-Host "构建报告已创建"
-      shell: pwsh
+      shell: powershell
 
   # 构建总结
   build-summary:
@@ -401,4 +401,4 @@ jobs:
         Write-Host "" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         Write-Host "### 下载 APK" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         Write-Host "- [water-tower-monitor-debug-windows](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-      shell: pwsh
+      shell: powershell

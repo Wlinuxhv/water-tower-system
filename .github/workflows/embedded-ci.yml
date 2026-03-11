@@ -35,7 +35,7 @@ jobs:
         Write-Host "OS Version: $(Get-CimInstance Win32_OperatingSystem).Version"
         Write-Host "Total Memory: $([math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize/1MB, 2)) GB"
         Write-Host "name=${{ runner.name }}" >> $env:GITHUB_OUTPUT
-      shell: pwsh
+      shell: powershell
       
     - name: 检查 SDCC 安装
       id: check-sdcc
@@ -102,7 +102,7 @@ jobs:
         }
         
         Write-Host "`n✅ 环境检查完成!"
-      shell: pwsh
+      shell: powershell
 
   # ESP8266 编译 (使用 Ubuntu)
   esp8266:
@@ -152,7 +152,7 @@ jobs:
         
         # 验证
         sdcc -v
-      shell: pwsh
+      shell: powershell
       
     - name: 检查源文件
       run: |
@@ -186,7 +186,7 @@ jobs:
             Write-Host "⚠️ 头文件不存在：$header"
           }
         }
-      shell: pwsh
+      shell: powershell
       
     - name: 编译 STC8G1K08
       id: compile
@@ -359,7 +359,7 @@ jobs:
         # 输出信息
         Write-Host "`n✅ STC8G1K08 编译成功!"
         Write-Host "产物位置：$outDir"
-      shell: pwsh
+      shell: powershell
       
     - name: 上传 HEX 文件
       uses: actions/upload-artifact@v4
@@ -453,4 +453,4 @@ jobs:
         Write-Host "### 下载产物" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         Write-Host "- [stc8g-hex-windows](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
         Write-Host "- [esp8266-firmware](../../actions/runs/${{ github.run_id }}/artifacts)" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-      shell: pwsh
+      shell: powershell
