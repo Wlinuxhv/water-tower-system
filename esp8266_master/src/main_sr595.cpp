@@ -130,7 +130,7 @@ void setup_oled() {
 }
 
 void setup_pan3031() {
-    pan3031_init();
+    pan3031_init(PAN3031_CS, PAN3031_MOSI, PAN3031_MISO, PAN3031_SCK, PAN3031_IRQ);
     pan3031_set_freq(434000000UL);
     pan3031_set_sf(7);
     pan3031_set_bw(125000UL);
@@ -348,7 +348,7 @@ void handle_network_comm() {
     if (len < 4) return;
     
     // 处理传感器数据
-    if (rx_data[1] == CMD_SENSOR_DATA) {
+    if (rx_data[1] == CMD_QUERY) {
         uint8_t tower_id = rx_data[0];
         uint8_t water_level = rx_data[3];
         uint8_t well_ok = rx_data[4];
