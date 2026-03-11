@@ -236,7 +236,7 @@ class MainActivity : AppCompatActivity() {
             }, 500)
         } else {
             // 实际模式：调用 API
-            ApiClient.api.getTowerStatus().enqueue(
+            ApiClient.api.getSystemStatus().enqueue(
                 object : retrofit2.Callback<List<TowerData>> {
                     override fun onResponse(
                         call: retrofit2.Call<List<TowerData>>,
