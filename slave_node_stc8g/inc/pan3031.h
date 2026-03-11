@@ -68,7 +68,7 @@ void pan3031_set_sf(uint8_t sf);
 void pan3031_set_bw(uint32_t bw);
 void pan3031_set_power(uint8_t power);
 void pan3031_send(uint8_t *data, uint8_t len);
-bit pan3031_receive(uint8_t *data, uint8_t *len);
+uint8_t pan3031_receive(uint8_t *data, uint8_t *len);
 void pan3031_sleep(void);
 void pan3031_wor_enable(void);
 

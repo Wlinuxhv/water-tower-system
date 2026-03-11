@@ -64,9 +64,9 @@ static void i2c_stop(void) {
 }
 
 // I2C 发送一个字节
-static bit i2c_send_byte(uint8_t data) {
+static unsigned char i2c_send_byte(uint8_t data) {
     uint8_t i;
-    bit ack;
+    unsigned char ack;
     
     for (i = 0; i < 8; i++) {
         if (data & 0x80)
@@ -95,7 +95,7 @@ static bit i2c_send_byte(uint8_t data) {
 }
 
 // I2C 读取一个字节
-static uint8_t i2c_read_byte(bit ack) {
+static uint8_t i2c_read_byte(unsigned char ack) {
     uint8_t i, data = 0;
     
     SC09B_SDA = 1;
@@ -240,6 +240,6 @@ void sc09b_wakeup(void) {
  * 检查是否有数据就绪 (通过 INT 引脚)
  * 返回：1=数据就绪，0=无数据
  */
-bit sc09b_data_ready(void) {
+unsigned char sc09b_data_ready(void) {
     return (SC09B_INT == 0);  // 低电平表示数据就绪
 }

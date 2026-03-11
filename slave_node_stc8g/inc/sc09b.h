@@ -44,6 +44,6 @@ void sc09b_sleep(void);
 void sc09b_wakeup(void);
 
 // 数据就绪检查
-bit sc09b_data_ready(void);
+uint8_t sc09b_data_ready(void);
 
 #endif
