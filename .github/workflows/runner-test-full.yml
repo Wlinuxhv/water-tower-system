@@ -1,0 +1,402 @@
+name: Runner Diagnostics & Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/runner-test-full.yml'
+
+jobs:
+  # 任务 1: 基础系统信息
+  system-info:
+    name: 系统信息收集
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: 系统基本信息
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  系统信息" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        
+        Write-Host "`n[OS 信息]"
+        systeminfo | Select-String "OS Name|OS Version"
+        
+        Write-Host "`n[网络信息]"
+        ipconfig | Select-String "IPv4"
+        
+        Write-Host "`n[当前用户]"
+        whoami
+        
+        Write-Host "`n[工作目录]"
+        Get-Location
+        Write-Host "Runner 目录：$env:RUNNER_TOOL_CACHE"
+      shell: powershell
+      
+    - name: PowerShell 版本
+      run: |
+        Write-Host "`n[PowerShell 版本]" -ForegroundColor Yellow
+        $PSVersionTable | Format-Table
+        
+        Write-Host "`n[执行策略]"
+        Get-ExecutionPolicy -List
+      shell: powershell
+      
+    - name: 检查 Java
+      run: |
+        Write-Host "`n[Java 环境]" -ForegroundColor Yellow
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Java 已安装"
+          java -version 2>&1
+          Write-Host "`nJAVA_HOME: $env:JAVA_HOME"
+        } else {
+          Write-Host "❌ Java 未安装"
+          
+          # 尝试查找
+          $paths = @(
+            "C:\Program Files\Java",
+            "C:\Program Files (x86)\Java"
+          )
+          foreach ($p in $paths) {
+            if (Test-Path $p) {
+              Write-Host "  找到：$p"
+              Get-ChildItem $p
+            }
+          }
+        }
+      shell: powershell
+      
+    - name: 检查 Android SDK
+      run: |
+        Write-Host "`n[Android SDK]" -ForegroundColor Yellow
+        
+        if ($env:ANDROID_HOME) {
+          Write-Host "✅ ANDROID_HOME: $env:ANDROID_HOME"
+          if (Test-Path $env:ANDROID_HOME) {
+            Write-Host "`n已安装组件:"
+            if (Test-Path "$env:ANDROID_HOME\platforms") {
+              Write-Host "  Platforms:"
+              Get-ChildItem "$env:ANDROID_HOME\platforms" | Select-Object -ExpandProperty Name
+            }
+            if (Test-Path "$env:ANDROID_HOME\build-tools") {
+              Write-Host "  Build Tools:"
+              Get-ChildItem "$env:ANDROID_HOME\build-tools" | Select-Object -ExpandProperty Name
+            }
+          }
+        } else {
+          Write-Host "❌ ANDROID_HOME 未设置"
+          
+          # 尝试查找
+          $paths = @(
+            "C:\Android\android-sdk",
+            "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk",
+            "C:\Program Files\Android\android-sdk"
+          )
+          foreach ($p in $paths) {
+            if (Test-Path $p) {
+              Write-Host "  找到 SDK: $p"
+              [Environment]::SetEnvironmentVariable("ANDROID_HOME", $p, "Process")
+            }
+          }
+        }
+        
+        Write-Host "`n[Android Studio]"
+        $studioPaths = @(
+          "C:\Program Files\Android\Android Studio",
+          "C:\Program Files (x86)\Android\Android Studio"
+        )
+        foreach ($p in $studioPaths) {
+          if (Test-Path $p) {
+            Write-Host "✅ 找到：$p"
+          }
+        }
+      shell: powershell
+      
+    - name: 检查 Gradle
+      run: |
+        Write-Host "`n[Gradle]" -ForegroundColor Yellow
+        
+        if (Get-Command gradle -ErrorAction SilentlyContinue) {
+          Write-Host "✅ Gradle 已安装"
+          gradle --version
+        } else {
+          Write-Host "⚠️ Gradle 命令不可用"
+        }
+        
+        Write-Host "`n[Gradle Wrapper]"
+        if (Test-Path "android_app\gradlew.bat") {
+          Write-Host "✅ gradlew.bat 存在"
+          cd android_app
+          .\gradlew.bat --version
+        } else {
+          Write-Host "❌ gradlew.bat 不存在"
+        }
+      shell: powershell
+      
+    - name: 检查项目文件
+      run: |
+        Write-Host "`n[项目文件]" -ForegroundColor Yellow
+        
+        $files = @(
+          "android_app\build.gradle",
+          "android_app\app\build.gradle",
+          "android_app\settings.gradle",
+          "android_app\gradlew.bat"
+        )
+        
+        foreach ($file in $files) {
+          if (Test-Path $file) {
+            $size = (Get-Item $file).Length
+            Write-Host "✅ $file ($size 字节)"
+          } else {
+            Write-Host "❌ $file (不存在)"
+          }
+        }
+      shell: powershell
+      
+    - name: 上传诊断日志
+      uses: actions/upload-artifact@v4
+      with:
+        name: system-diagnostics
+        path: |
+          C:\actions-runner\_diag\*.log
+        retention-days: 7
+
+  # 任务 2: PowerShell 功能测试
+  powershell-test:
+    name: PowerShell 功能测试
+    runs-on: [self-hosted, Windows, X64]
+    needs: system-info
+    
+    steps:
+    - name: 基础命令测试
+      run: |
+        Write-Host "======================================" -ForegroundColor Green
+        Write-Host "  PowerShell 功能测试" -ForegroundColor Green
+        Write-Host "======================================" -ForegroundColor Green
+        
+        Write-Host "`n[Test 1] Write-Host"
+        Write-Host "✅ Write-Host 正常"
+        
+        Write-Host "`n[Test 2] 变量操作"
+        $test = "PowerShell Test"
+        Write-Host "变量值：$test"
+        
+        Write-Host "`n[Test 3] 文件操作"
+        $testFile = "test_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"
+        "Test Content" | Out-File $testFile
+        Write-Host "创建文件：$testFile"
+        Get-ChildItem $testFile
+        Remove-Item $testFile
+        Write-Host "删除文件：$testFile"
+        
+        Write-Host "`n[Test 4] 命令执行"
+        $result = Get-Process | Select-Object -First 5
+        Write-Host "获取进程数：$($result.Count)"
+        
+        Write-Host "`n✅ 所有 PowerShell 测试通过!"
+      shell: powershell
+      
+    - name: 环境变量测试
+      run: |
+        Write-Host "`n[环境变量测试]" -ForegroundColor Cyan
+        
+        $envVars = @(
+          "RUNNER_NAME",
+          "RUNNER_OS",
+          "RUNNER_ARCH",
+          "RUNNER_TOOL_CACHE",
+          "GITHUB_WORKSPACE",
+          "GITHUB_ACTION",
+          "GITHUB_RUN_ID"
+        )
+        
+        foreach ($var in $envVars) {
+          $value = Get-ChildItem Env:$var -ErrorAction SilentlyContinue
+          if ($value) {
+            Write-Host "✅ $var = $value"
+          } else {
+            Write-Host "⚠️ $var 未设置"
+          }
+        }
+      shell: powershell
+
+  # 任务 3: Android 构建测试
+  android-build-test:
+    name: Android 构建测试
+    runs-on: [self-hosted, Windows, X64]
+    needs: powershell-test
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置环境
+      run: |
+        Write-Host "======================================" -ForegroundColor Magenta
+        Write-Host "  Android 构建环境设置" -ForegroundColor Magenta
+        Write-Host "======================================" -ForegroundColor Magenta
+        
+        # 设置 ANDROID_HOME
+        if (-not $env:ANDROID_HOME) {
+          $sdkPaths = @(
+            "C:\Android\android-sdk",
+            "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk"
+          )
+          foreach ($p in $sdkPaths) {
+            if (Test-Path $p) {
+              $env:ANDROID_HOME = $p
+              Write-Host "✅ 设置 ANDROID_HOME: $p"
+              break
+            }
+          }
+        }
+        
+        # 创建 local.properties
+        if ($env:ANDROID_HOME -and (Test-Path "android_app")) {
+          cd android_app
+          "sdk.dir=$env:ANDROID_HOME" | Out-File local.properties -Encoding ASCII
+          Write-Host "✅ 创建 local.properties"
+          Get-Content local.properties
+        }
+      shell: powershell
+      
+    - name: 清理构建
+      working-directory: android_app
+      run: |
+        Write-Host "`n[清理旧构建]" -ForegroundColor Yellow
+        if (Test-Path "app\build") {
+          Remove-Item -Recurse -Force "app\build"
+          Write-Host "✅ 清理 app\build"
+        }
+        if (Test-Path "build") {
+          Remove-Item -Recurse -Force "build"
+          Write-Host "✅ 清理 build"
+        }
+      shell: powershell
+      
+    - name: 编译 Debug APK
+      id: build
+      working-directory: android_app
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  开始编译 Android APK" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        
+        Write-Host "`n[Gradle 版本]"
+        .\gradlew.bat --version
+        
+        Write-Host "`n[编译 APK]"
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        
+        .\gradlew.bat assembleDebug --no-daemon --stacktrace
+        
+        $stopwatch.Stop()
+        $duration = $stopwatch.Elapsed.TotalMinutes
+        
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "`n✅ 编译成功! 耗时：$([math]::Round($duration, 2)) 分钟" -ForegroundColor Green
+        } else {
+          Write-Host "`n❌ 编译失败!" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      timeout-minutes: 30
+      
+    - name: 查找 APK
+      id: apk
+      if: success()
+      run: |
+        Write-Host "`n[查找 APK 文件]" -ForegroundColor Cyan
+        
+        $apk = Get-ChildItem -Recurse -Filter "*.apk" -Path "app\build\outputs\apk\debug" | 
+               Sort-Object LastWriteTime -Descending | 
+               Select-Object -First 1
+        
+        if ($apk) {
+          $sizeMB = [math]::Round($apk.Length / 1MB, 2)
+          Write-Host "`n✅ 找到 APK:" -ForegroundColor Green
+          Write-Host "  文件名：$($apk.Name)"
+          Write-Host "  大小：$sizeMB MB"
+          Write-Host "  路径：$($apk.FullName)"
+          Write-Host "  时间：$($apk.LastWriteTime)"
+          
+          echo "apk-path=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+          echo "apk-name=$($apk.Name)" >> $env:GITHUB_OUTPUT
+          echo "apk-size=$sizeMB" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "❌ 未找到 APK 文件" -ForegroundColor Red
+          exit 1
+        }
+      shell: powershell
+      working-directory: android_app
+      
+    - name: 上传 APK
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: water-tower-monitor-debug
+        path: ${{ steps.apk.outputs.apk-path }}
+        retention-days: 30
+        
+    - name: 构建总结
+      if: always()
+      run: |
+        Write-Host "`n" + ("=" * 60) -ForegroundColor Cyan
+        Write-Host "  构建总结" -ForegroundColor Cyan
+        Write-Host ("=" * 60) -ForegroundColor Cyan
+        
+        if ("${{ steps.build.conclusion }}" -eq "success") {
+          Write-Host "`n🎉 构建成功!" -ForegroundColor Green
+          Write-Host "APK: ${{ steps.apk.outputs.apk-name }}"
+          Write-Host "大小：${{ steps.apk.outputs.apk-size }} MB"
+          Write-Host "下载：https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        } else {
+          Write-Host "`n❌ 构建失败" -ForegroundColor Red
+          Write-Host "请查看详细日志了解原因"
+        }
+        
+        Write-Host "`n" + ("=" * 60) -ForegroundColor Cyan
+      shell: powershell
+
+  # 任务 4: 最终报告
+  final-report:
+    name: 最终报告
+    runs-on: [self-hosted, Windows, X64]
+    needs: [system-info, powershell-test, android-build-test]
+    if: always()
+    
+    steps:
+    - name: 生成报告
+      run: |
+        Write-Host "`n" + ("=" * 60) -ForegroundColor Cyan
+        Write-Host "  Runner 诊断最终报告" -ForegroundColor Cyan
+        Write-Host ("=" * 60) -ForegroundColor Cyan
+        
+        Write-Host "`n[Runner 信息]"
+        Write-Host "  名称：$env:RUNNER_NAME"
+        Write-Host "  OS: $env:RUNNER_OS"
+        Write-Host "  架构：$env:RUNNER_ARCH"
+        
+        Write-Host "`n[任务状态]"
+        Write-Host "  系统信息：${{ needs.system-info.result }}"
+        Write-Host "  PowerShell 测试：${{ needs.powershell-test.result }}"
+        Write-Host "  Android 构建：${{ needs.android-build-test.result }}"
+        
+        $allSuccess = (
+          "${{ needs.system-info.result }}" -eq "success" -and
+          "${{ needs.powershell-test.result }}" -eq "success" -and
+          "${{ needs.android-build-test.result }}" -eq "success"
+        )
+        
+        Write-Host "`n[总体状态]"
+        if ($allSuccess) {
+          Write-Host "  🎉 所有测试通过!" -ForegroundColor Green
+          Write-Host "  Runner 工作正常，可以正常构建 Android APP"
+        } else {
+          Write-Host "  ⚠️ 部分测试失败" -ForegroundColor Yellow
+          Write-Host "  请检查上述日志了解原因"
+        }
+        
+        Write-Host "`n" + ("=" * 60) -ForegroundColor Cyan
+      shell: powershell
