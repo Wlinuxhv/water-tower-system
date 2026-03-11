@@ -18,9 +18,9 @@
 #include <STC8G1K08.h>
 
 // ==================== I2C 引脚定义 ====================
-sbit SC09B_SCL = P3^0;
-sbit SC09B_SDA = P3^1;
-sbit SC09B_INT = P3^2;  // 可选中断引脚
+__sbit __at(0xB0) SC09B_SCL;
+__sbit __at(0xB1) SC09B_SDA;
+__sbit __at(0xB2) SC09B_INT;  // 可选中断引脚
 
 // ==================== I2C 基础函数 ====================
 

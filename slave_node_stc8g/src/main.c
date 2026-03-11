@@ -18,13 +18,13 @@
 
 // ==================== 引脚定义 ====================
 // PAN3031 LoRa 通信
-sbit PAN3031_CS   = P2^3;
-sbit PAN3031_MOSI = P2^2;
-sbit PAN3031_MISO = P2^1;
-sbit PAN3031_SCK  = P2^0;
+__sbit __at(0xA3) PAN3031_CS;   // P2.3 = 0xA0+3
+__sbit __at(0xA2) PAN3031_MOSI; // P2.2
+__sbit __at(0xA1) PAN3031_MISO; // P2.1
+__sbit __at(0xA0) PAN3031_SCK;  // P2.0
 
 // 传感器输入 (只读)
-sbit WATER_LOW_DET = P3^4;  // 缺水检测
+__sbit __at(0xB4) WATER_LOW_DET; // P3.4 = 0xB0+4  // 缺水检测
 // 注意：水泵继电器由 ESP8266 主机控制，STC8G 不控制
 
 // ==================== 全局变量 ====================

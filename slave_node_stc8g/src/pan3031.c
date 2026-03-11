@@ -6,10 +6,10 @@
 #include "pan3031.h"
 
 // 引脚定义
-sbit PAN3031_CS   = P2^3;
-sbit PAN3031_MOSI = P2^2;
-sbit PAN3031_MISO = P2^1;
-sbit PAN3031_SCK  = P2^0;
+__sbit __at(0xA3) PAN3031_CS;
+__sbit __at(0xA2) PAN3031_MOSI;
+__sbit __at(0xA1) PAN3031_MISO;
+__sbit __at(0xA0) PAN3031_SCK;
 
 // 全局变量
 static unsigned long g_millis = 0;
