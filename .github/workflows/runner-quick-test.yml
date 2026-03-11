@@ -1,0 +1,196 @@
+name: Runner Quick Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Quick Runner Test
+    runs-on: [self-hosted, Windows, X64]
+    
+    steps:
+    - name: 检查 Runner 安装路径
+      run: |
+        Write-Host "======================================" -ForegroundColor Cyan
+        Write-Host "  Runner 安装路径检查" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        
+        Write-Host "`n[当前工作目录]"
+        Get-Location
+        
+        Write-Host "`n[Runner 目录]"
+        $runnerPaths = @(
+          "C:\actions-runner",
+          "D:\Runner\water-tower-system",
+          "D:\Runner",
+          "C:\Runner"
+        )
+        
+        foreach ($path in $runnerPaths) {
+          if (Test-Path $path) {
+            Write-Host "✅ 找到：$path" -ForegroundColor Green
+            Get-ChildItem $path | Select-Object -First 10 Name
+          } else {
+            Write-Host "❌ 不存在：$path"
+          }
+        }
+        
+        Write-Host "`n[环境变量]"
+        Write-Host "RUNNER_TOOL_CACHE: $env:RUNNER_TOOL_CACHE"
+        Write-Host "RUNNER_NAME: $env:RUNNER_NAME"
+        Write-Host "RUNNER_OS: $env:RUNNER_OS"
+      shell: powershell
+      
+    - name: 检查 PowerShell 执行能力
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Yellow
+        Write-Host "  PowerShell 执行能力测试" -ForegroundColor Yellow
+        Write-Host "======================================" -ForegroundColor Yellow
+        
+        Write-Host "`n[Test 1] Write-Host"
+        Write-Host "✅ Write-Host 正常"
+        
+        Write-Host "`n[Test 2] 变量"
+        $test = "PowerShell Works!"
+        Write-Host "变量测试：$test"
+        
+        Write-Host "`n[Test 3] 文件操作"
+        $file = "test_$((Get-Date).ToString('HHmmss')).txt"
+        "Test" | Out-File $file
+        Write-Host "创建文件：$file"
+        Get-ChildItem $file
+        Remove-Item $file
+        Write-Host "删除文件：$file"
+        
+        Write-Host "`n[Test 4] 命令执行"
+        $procs = Get-Process | Measure-Object
+        Write-Host "当前进程数：$($procs.Count)"
+        
+        Write-Host "`n✅ PowerShell 执行正常!" -ForegroundColor Green
+      shell: powershell
+      
+    - name: 检查 Java 环境
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Magenta
+        Write-Host "  Java 环境检查" -ForegroundColor Magenta
+        Write-Host "======================================" -ForegroundColor Magenta
+        
+        Write-Host "`n[JAVA_HOME]"
+        Write-Host "值：$env:JAVA_HOME"
+        if ($env:JAVA_HOME -and (Test-Path $env:JAVA_HOME)) {
+          Write-Host "✅ 目录存在" -ForegroundColor Green
+          Get-ChildItem $env:JAVA_HOME | Select-Object -First 5 Name
+        }
+        
+        Write-Host "`n[java 命令]"
+        if (Get-Command java -ErrorAction SilentlyContinue) {
+          Write-Host "✅ java 命令可用" -ForegroundColor Green
+          java -version 2>&1
+        } else {
+          Write-Host "❌ java 命令不可用" -ForegroundColor Red
+          
+          # 尝试查找
+          Write-Host "`n[查找 Java 安装]"
+          $javaPaths = @(
+            "C:\Program Files\Java",
+            "C:\Program Files (x86)\Java",
+            "C:\Android\jdk",
+            "D:\Java"
+          )
+          foreach ($p in $javaPaths) {
+            if (Test-Path $p) {
+              Write-Host "  找到：$p" -ForegroundColor Yellow
+              Get-ChildItem $p | Select-Object -First 3 Name
+            }
+          }
+        }
+      shell: powershell
+      
+    - name: 检查 Android SDK
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Blue
+        Write-Host "  Android SDK 检查" -ForegroundColor Blue
+        Write-Host "======================================" -ForegroundColor Blue
+        
+        Write-Host "`n[ANDROID_HOME]"
+        Write-Host "值：$env:ANDROID_HOME"
+        
+        if ($env:ANDROID_HOME) {
+          if (Test-Path $env:ANDROID_HOME) {
+            Write-Host "✅ SDK 目录存在" -ForegroundColor Green
+            
+            Write-Host "`n[已安装组件]"
+            if (Test-Path "$env:ANDROID_HOME\platforms") {
+              $platforms = Get-ChildItem "$env:ANDROID_HOME\platforms" | Select-Object -ExpandProperty Name
+              Write-Host "  Platforms: $($platforms -join ', ')"
+            }
+            if (Test-Path "$env:ANDROID_HOME\build-tools") {
+              $tools = Get-ChildItem "$env:ANDROID_HOME\build-tools" | Select-Object -ExpandProperty Name
+              Write-Host "  Build Tools: $($tools -join ', ')"
+            }
+          } else {
+            Write-Host "❌ SDK 目录不存在" -ForegroundColor Red
+          }
+        } else {
+          Write-Host "❌ ANDROID_HOME 未设置" -ForegroundColor Red
+          
+          # 尝试查找
+          Write-Host "`n[查找 Android SDK]"
+          $sdkPaths = @(
+            "C:\Android\android-sdk",
+            "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk",
+            "D:\Android\android-sdk",
+            "D:\Android\Sdk"
+          )
+          foreach ($p in $sdkPaths) {
+            if (Test-Path $p) {
+              Write-Host "  ✅ 找到：$p" -ForegroundColor Green
+            }
+          }
+        }
+        
+        Write-Host "`n[Android Studio]"
+        $studioPaths = @(
+          "C:\Program Files\Android\Android Studio",
+          "D:\Android\Android Studio"
+        )
+        foreach ($p in $studioPaths) {
+          if (Test-Path $p) {
+            Write-Host "  ✅ 找到：$p" -ForegroundColor Green
+          }
+        }
+      shell: powershell
+      
+    - name: 上传 Runner 日志
+      uses: actions/upload-artifact@v4
+      with:
+        name: runner-logs
+        path: |
+          D:\Runner\water-tower-system\_diag\*.log
+          C:\actions-runner\_diag\*.log
+        retention-days: 7
+        
+    - name: 最终总结
+      run: |
+        Write-Host "`n======================================" -ForegroundColor Cyan
+        Write-Host "  测试总结" -ForegroundColor Cyan
+        Write-Host "======================================" -ForegroundColor Cyan
+        
+        Write-Host "`n[Runner 信息]"
+        Write-Host "  名称：$env:RUNNER_NAME"
+        Write-Host "  OS: $env:RUNNER_OS"
+        Write-Host "  架构：$env:RUNNER_ARCH"
+        
+        Write-Host "`n[测试结果]"
+        Write-Host "  ✅ Runner 路径检查"
+        Write-Host "  ✅ PowerShell 执行"
+        Write-Host "  ⏳ Java 检查 (见上方详情)"
+        Write-Host "  ⏳ Android SDK 检查 (见上方详情)"
+        
+        Write-Host "`n[下一步]"
+        Write-Host "  1. 查看上方的详细输出"
+        Write-Host "  2. 下载 runner-logs artifact 查看详细日志"
+        Write-Host "  3. 根据检查结果配置环境变量"
+        
+        Write-Host "`n======================================" -ForegroundColor Cyan
+      shell: powershell
