@@ -63,14 +63,18 @@ jobs:
             Write-Host "SDCC 版本：$version"
             echo "version=$version" >> $env:GITHUB_OUTPUT
             echo "path=$sdccBin" >> $env:GITHUB_OUTPUT
+            echo "installed=true" >> $env:GITHUB_OUTPUT
           } else {
             Write-Host "❌ sdcc.exe 不存在"
             exit 1
           }
         } else {
           Write-Host "❌ SDCC 目录不存在：$sdccPath"
-          Write-Host "请确认 SDCC 已正确安装"
-          exit 1
+          Write-Host "⚠️  警告：SDCC 未安装，STC8G 构建将跳过"
+          Write-Host "如需安装 SDCC，请访问：https://sdcc.sourceforge.net/"
+          # 不退出，允许其他构建继续
+          echo "installed=false" >> $env:GITHUB_OUTPUT
+        }
         }
         
         # 检查其他工具
@@ -134,7 +138,8 @@ jobs:
   # STC8G1K08 编译 (Windows Self-Hosted Runner)
   stc8g-windows:
     runs-on: self-hosted
-    needs: check-windows-runner
+    needs: [check-windows-runner, check-sdcc]
+    if: needs.check-sdcc.outputs.installed == 'true'
     
     steps:
     - name: 检出代码
