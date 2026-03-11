@@ -6,68 +6,98 @@
 #ifndef STC8G1K08_H
 #define STC8G1K08_H
 
-#include <8051.h>
-
-// 特殊功能寄存器定义
-sfr P0M0 = 0x94;
-sfr P0M1 = 0x93;
-sfr P1M0 = 0x92;
-sfr P1M1 = 0x91;
-sfr P2M0 = 0x96;
-sfr P2M1 = 0x95;
-sfr P3M0 = 0xB2;
-sfr P3M1 = 0xB1;
-sfr P4M0 = 0xB4;
-sfr P4M1 = 0xB3;
+// 特殊功能寄存器定义 (必须在 include 之前)
+__sfr __at(0x94) P0M0;
+__sfr __at(0x93) P0M1;
+__sfr __at(0x92) P1M0;
+__sfr __at(0x91) P1M1;
+__sfr __at(0x96) P2M0;
+__sfr __at(0x95) P2M1;
+__sfr __at(0xB2) P3M0;
+__sfr __at(0xB1) P3M1;
+__sfr __at(0xB4) P4M0;
+__sfr __at(0xB3) P4M1;
 
 // ADC 相关
-sfr ADC_CONTR = 0xBC;
-sfr ADC_RES = 0xBD;
-sfr ADC_RESL = 0xBE;
+__sfr __at(0xBC) ADC_CONTR;
+__sfr __at(0xBD) ADC_RES;
+__sfr __at(0xBE) ADC_RESL;
 
 // 中断相关
-sfr IE = 0xA8;
-sfr IE2 = 0xAF;
-sfr IP = 0xB8;
-sfr IP2 = 0xB7;
+__sfr __at(0xA8) IE;
+__sfr __at(0xAF) IE2;
+__sfr __at(0xB8) IP;
+__sfr __at(0xB7) IP2;
 
 // 定时器相关
-sfr TCON = 0x88;
-sfr TMOD = 0x89;
-sfr TL0 = 0x8A;
-sfr TL1 = 0x8B;
-sfr TH0 = 0x8C;
-sfr TH1 = 0x8D;
+__sfr __at(0x88) TCON;
+__sfr __at(0x89) TMOD;
+__sfr __at(0x8A) TL0;
+__sfr __at(0x8B) TL1;
+__sfr __at(0x8C) TH0;
+__sfr __at(0x8D) TH1;
 
 // 串口相关
-sfr SCON = 0x98;
-sfr SBUF = 0x99;
-sfr S2CON = 0x9A;
-sfr S2BUF = 0x9B;
+__sfr __at(0x98) SCON;
+__sfr __at(0x99) SBUF;
+__sfr __at(0x9A) S2CON;
+__sfr __at(0x9B) S2BUF;
 
 // 系统控制
-sfr PCON = 0x87;
-sfr AUXR = 0x8E;
-sfr AUXR2 = 0x8F;
-sfr CLK_DIV = 0x97;
+__sfr __at(0x87) PCON;
+__sfr __at(0x8E) AUXR;
+__sfr __at(0x8F) AUXR2;
+__sfr __at(0x97) CLK_DIV;
 
 // 看门狗
-sfr WDT_CONTR = 0xC1;
+__sfr __at(0xC1) WDT_CONTR;
+
+#include <8051.h>
 
 // GPIO 位定义
-sbit P00 = P0^0; sbit P01 = P0^1; sbit P02 = P0^2; sbit P03 = P0^3;
-sbit P04 = P0^4; sbit P05 = P0^5; sbit P06 = P0^6; sbit P07 = P0^7;
+__sbit __at(0x80) P00;
+__sbit __at(0x81) P01;
+__sbit __at(0x82) P02;
+__sbit __at(0x83) P03;
+__sbit __at(0x84) P04;
+__sbit __at(0x85) P05;
+__sbit __at(0x86) P06;
+__sbit __at(0x87) P07;
 
-sbit P10 = P1^0; sbit P11 = P1^1; sbit P12 = P1^2; sbit P13 = P1^3;
-sbit P14 = P1^4; sbit P15 = P1^5; sbit P16 = P1^6; sbit P17 = P1^7;
+__sbit __at(0x90) P10;
+__sbit __at(0x91) P11;
+__sbit __at(0x92) P12;
+__sbit __at(0x93) P13;
+__sbit __at(0x94) P14;
+__sbit __at(0x95) P15;
+__sbit __at(0x96) P16;
+__sbit __at(0x97) P17;
 
-sbit P20 = P2^0; sbit P21 = P2^1; sbit P22 = P2^2; sbit P23 = P2^3;
-sbit P24 = P2^4; sbit P25 = P2^5; sbit P26 = P2^6; sbit P27 = P2^7;
+__sbit __at(0xA0) P20;
+__sbit __at(0xA1) P21;
+__sbit __at(0xA2) P22;
+__sbit __at(0xA3) P23;
+__sbit __at(0xA4) P24;
+__sbit __at(0xA5) P25;
+__sbit __at(0xA6) P26;
+__sbit __at(0xA7) P27;
 
-sbit P30 = P3^0; sbit P31 = P3^1; sbit P32 = P3^2; sbit P33 = P3^3;
-sbit P34 = P3^4; sbit P35 = P3^5; sbit P36 = P3^6; sbit P37 = P3^7;
+__sbit __at(0xB0) P30;
+__sbit __at(0xB1) P31;
+__sbit __at(0xB2) P32;
+__sbit __at(0xB3) P33;
+__sbit __at(0xB4) P34;
+__sbit __at(0xB5) P35;
+__sbit __at(0xB6) P36;
+__sbit __at(0xB7) P37;
 
-sbit P40 = P4^0; sbit P41 = P4^1; sbit P42 = P4^2; sbit P43 = P4^3;
-sbit P44 = P4^4; sbit P45 = P4^5; sbit P46 = P4^6; sbit P47 = P4^7;
+__sbit __at(0xC0) P40;
+__sbit __at(0xC1) P41;
+__sbit __at(0xC2) P42;
+__sbit __at(0xC3) P43;
+__sbit __at(0xC4) P44;
+__sbit __at(0xC5) P45;
+__sbit __at(0xC6) P46;
+__sbit __at(0xC7) P47;
 
 #endif // STC8G1K08_H
