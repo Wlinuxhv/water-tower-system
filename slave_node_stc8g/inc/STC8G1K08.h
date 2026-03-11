@@ -52,6 +52,13 @@ __sfr __at(0x97) CLK_DIV;
 // 看门狗
 __sfr __at(0xC1) WDT_CONTR;
 
+// 端口寄存器定义 (必须在 #include 之前，以便 sbit 使用)
+__sfr __at(0x80) P0;
+__sfr __at(0x90) P1;
+__sfr __at(0xA0) P2;
+__sfr __at(0xB0) P3;
+__sfr __at(0xC0) P4;
+
 #include <8051.h>
 
 // GPIO 位定义
