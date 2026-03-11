@@ -7,15 +7,24 @@ jobs:
   build:
     runs-on: [self-hosted, Windows, X64]
     
+    defaults:
+      run:
+        shell: powershell
+    
     steps:
-    - name: 设置环境
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 Java 和 Android 环境
       run: |
         # 设置 Java 环境 (Android Studio 内置 JBR)
         $javaHome = "C:\Program Files\Android\Android Studio\jbr\bin"
         $env:JAVA_HOME = $javaHome
         [Environment]::SetEnvironmentVariable("JAVA_HOME", $javaHome, "Process")
-        $env:PATH = "$javaHome;$env:PATH"
-        [Environment]::SetEnvironmentVariable("PATH", "$javaHome;$env:PATH", "Process")
+        
+        # 添加到 PATH
+        $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Process")
+        [Environment]::SetEnvironmentVariable("PATH", "$javaHome;$currentPath", "Process")
         
         # 设置 Android SDK 环境
         $androidHome = "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk"
@@ -27,29 +36,39 @@ jobs:
         Write-Host "=== 环境设置完成 ==="
         Write-Host "JAVA_HOME: $env:JAVA_HOME"
         Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
+        Write-Host "USERNAME: $env:USERNAME"
         
-        # 验证 Java (使用 cmd 以避免 PowerShell 输出问题)
+        # 验证 Java
         Write-Host "`n=== Java 版本 ==="
-        cmd /c "java -version" 2>&1
+        & "$javaHome\java.exe" -version 2>&1
         
         # 检查 Gradle Wrapper
-        if (Test-Path "android_app\gradlew.bat") {
-          Write-Host "`n✅ Gradle Wrapper 存在"
+        Write-Host "`n=== 检查项目文件 ==="
+        $gradlewPath = Join-Path $PWD "android_app\gradlew.bat"
+        if (Test-Path $gradlewPath) {
+          Write-Host "✅ Gradle Wrapper 存在：$gradlewPath"
         } else {
-          Write-Host "`n❌ Gradle Wrapper 不存在"
+          Write-Host "❌ Gradle Wrapper 不存在：$gradlewPath"
+          exit 1
         }
-      shell: powershell
-      
-    - name: 检出代码
-      uses: actions/checkout@v4
+        
+        # 检查 android_app 目录
+        $androidAppPath = Join-Path $PWD "android_app"
+        if (Test-Path $androidAppPath) {
+          Write-Host "✅ android_app 目录存在"
+          Get-ChildItem $androidAppPath -File | Select-Object -First 10 | ForEach-Object { Write-Host "   - $($_.Name)" }
+        } else {
+          Write-Host "❌ android_app 目录不存在"
+          Write-Host "当前目录：$PWD"
+          Get-ChildItem $PWD | ForEach-Object { Write-Host "   - $($_.Name)" }
+          exit 1
+        }
       
     - name: 编译 APK
       working-directory: android_app
-      shell: powershell
       run: |
         Write-Host "=== 开始编译 ==="
-        
-        # 继承上一步设置的环境变量
+        Write-Host "当前目录：$PWD"
         Write-Host "JAVA_HOME: $env:JAVA_HOME"
         Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
         
@@ -61,52 +80,65 @@ jobs:
         }
         
         # 清理
-        if (Test-Path "app\build") { Remove-Item -Recurse -Force "app\build" }
-        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-        Write-Host "`n清理完成"
+        if (Test-Path "app\build") { 
+          Write-Host "清理 app\build..."
+          Remove-Item -Recurse -Force "app\build" 
+        }
+        if (Test-Path "build") { 
+          Write-Host "清理 build..."
+          Remove-Item -Recurse -Force "build" 
+        }
+        Write-Host "清理完成"
         
-        # 编译 (使用 cmd 执行以避免 PowerShell 编码问题)
+        # 编译
         Write-Host "`n执行：gradlew.bat assembleDebug --no-daemon"
-        cmd /c "gradlew.bat assembleDebug --no-daemon"
+        .\gradlew.bat assembleDebug --no-daemon
         
         if ($LASTEXITCODE -eq 0) {
           Write-Host "`n✅ 编译成功!"
         } else {
-          Write-Host "`n❌ 编译失败! 退出码：$LASTEXITCODE"
+          Write-Host "`n❌ 编译失败！退出码：$LASTEXITCODE"
           exit 1
         }
       
     - name: 查找 APK
       id: apk
-      shell: powershell
       run: |
         Write-Host "=== 查找 APK ==="
-        $apk = Get-ChildItem -Recurse -Filter "*.apk" -Path "app\build\outputs\apk\debug" | 
+        $apkPath = "app\build\outputs\apk\debug"
+        
+        if (-not (Test-Path $apkPath)) {
+          Write-Host "❌ APK 输出目录不存在：$apkPath"
+          Get-ChildItem -Recurse -Filter "*.apk" -Path . | ForEach-Object { Write-Host "  找到：$($_.FullName)" }
+          exit 1
+        }
+        
+        $apk = Get-ChildItem -Recurse -Filter "*.apk" -Path $apkPath | 
                Sort-Object LastWriteTime -Descending | 
                Select-Object -First 1
         
         if ($apk) {
           $sizeMB = [math]::Round($apk.Length / 1MB, 2)
           Write-Host "✅ 找到：$($apk.Name)"
+          Write-Host "   路径：$($apk.FullName)"
           Write-Host "   大小：$sizeMB MB"
           
           echo "apk-path=$($apk.FullName)" >> $env:GITHUB_OUTPUT
           echo "apk-name=$($apk.Name)" >> $env:GITHUB_OUTPUT
           echo "apk-size=$sizeMB" >> $env:GITHUB_OUTPUT
         } else {
-          Write-Host "❌ 未找到 APK"
+          Write-Host "❌ 未找到 APK 文件"
           exit 1
         }
       
     - name: 上传 APK
       uses: actions/upload-artifact@v4
       with:
-        name: water-tower-monitor-powershell
+        name: water-tower-monitor
         path: ${{ steps.apk.outputs.apk-path }}
         retention-days: 30
         
     - name: 构建总结
-      shell: powershell
       run: |
         Write-Host "`n================================"
         Write-Host "  🎉 构建完成!"
