@@ -20,6 +20,9 @@
 // ==================== 命令字定义 ====================
 #define CMD_HEARTBEAT   0x01    // 心跳包
 #define CMD_QUERY       0x02    // 查询状态
+#define CMD_SENSOR      0x03    // 传感器数据
+#define CMD_SENSOR_DATA 0x03    // 传感器数据 (别名)
+#define CMD_READ_SENSOR 0x03    // 读取传感器 (别名)
 #define CMD_PUMP_CTRL   0x10    // 水泵控制
 #define CMD_SET_AUTO    0x20    // 自动模式
 #define CMD_SET_MANUAL  0x21    // 手动模式
