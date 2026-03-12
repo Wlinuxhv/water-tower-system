@@ -89,7 +89,7 @@ jobs:
     # ==================== Build Android APK ====================
     - name: Setup Android SDK
       run: |
-        $sdkPath = "C:\Users\User\AppData\Local\Android\Sdk"
+        $sdkPath = "C:/Users/User/AppData/Local/Android/Sdk"
         "sdk.dir=$sdkPath" | Out-File -FilePath "android_app\local.properties" -Encoding ASCII
         Get-Content "android_app\local.properties"
       shell: powershell
