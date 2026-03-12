@@ -97,16 +97,24 @@ jobs:
         Set-Location android_app
         "sdk.dir=$sdkPath" | Out-File -FilePath "local.properties" -Encoding utf8
         Write-Host "[OK] Android SDK configured: $sdkPath"
+        Write-Host "Content:" (Get-Content local.properties)
       shell: powershell
       
     - name: Build Android APK
       run: |
         # Add tools to PATH
         $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        $env:ANDROID_HOME = "C:\Users\User\AppData\Local\Android\Sdk"
+        $env:ANDROID_SDK_ROOT = "C:\Users\User\AppData\Local\Android\Sdk"
         
         Write-Host "`n[2] Building Android APK..." -ForegroundColor Yellow
         
         Set-Location android_app
+        
+        # Debug: show SDK path
+        Write-Host "SDK path: $env:ANDROID_HOME"
+        Write-Host "local.properties:" (Get-Content local.properties)
+        
         .\gradlew.bat assembleDebug --no-daemon
         
         if ($LASTEXITCODE -eq 0) {
