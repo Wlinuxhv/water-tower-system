@@ -2,12 +2,6 @@ name: Full Build - All Components
 
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.github/workflows/runner-*.yml'
 
 jobs:
   # ============================================
