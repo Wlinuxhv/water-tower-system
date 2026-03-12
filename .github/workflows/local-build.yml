@@ -1,4 +1,4 @@
-name: 本地构建 - 全部固件
+name: Local Build - All Firmwares
 
 on:
   workflow_dispatch:
@@ -9,188 +9,190 @@ on:
 
 jobs:
   build-all:
-    name: 🔨 构建所有固件
+    name: Build All Firmwares
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     
     steps:
-    - name: 检出代码
+    - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: 显示构建环境
+      with:
+        submodules: false
+        
+    - name: Show build environment
       run: |
         Write-Host "======================================" -ForegroundColor Cyan
-        Write-Host "  水塔监控系统 - 本地构建" -ForegroundColor Cyan
+        Write-Host "  Water Tower Monitor - Local Build" -ForegroundColor Cyan
         Write-Host "======================================" -ForegroundColor Cyan
         Write-Host "Runner: $env:RUNNER_NAME"
-        Write-Host "工作目录: $env:GITHUB_WORKSPACE"
-        Write-Host "时间: $(Get-Date)"
+        Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+        Write-Host "Time: $(Get-Date)"
         Write-Host "======================================" -ForegroundColor Cyan
       shell: powershell
       
-    # ==================== 检查构建工具 ====================
-    - name: 检查构建工具
+    # ==================== Check build tools ====================
+    - name: Check build tools
       run: |
-        Write-Host "`n[1] 检查构建工具..." -ForegroundColor Yellow
+        Write-Host "`n[1] Checking build tools..." -ForegroundColor Yellow
         
         # Java
         if (Get-Command java -ErrorAction SilentlyContinue) {
           $javaVer = java -version 2>&1 | Select-Object -First 1
-          Write-Host "✅ Java: $javaVer" -ForegroundColor Green
+          Write-Host "[OK] Java: $javaVer" -ForegroundColor Green
         } else {
-          Write-Host "❌ Java 未安装" -ForegroundColor Red
+          Write-Host "[FAIL] Java not found" -ForegroundColor Red
         }
         
         # PlatformIO
         if (Get-Command pio -ErrorAction SilentlyContinue) {
           $pioVer = pio --version 2>&1
-          Write-Host "✅ PlatformIO: $pioVer" -ForegroundColor Green
+          Write-Host "[OK] PlatformIO: $pioVer" -ForegroundColor Green
         } else {
-          Write-Host "❌ PlatformIO 未安装" -ForegroundColor Red
+          Write-Host "[FAIL] PlatformIO not found" -ForegroundColor Red
         }
         
         # SDCC
         if (Get-Command sdcc -ErrorAction SilentlyContinue) {
           $sdccVer = sdcc --version 2>&1 | Select-Object -First 1
-          Write-Host "✅ SDCC: $sdccVer" -ForegroundColor Green
+          Write-Host "[OK] SDCC: $sdccVer" -ForegroundColor Green
         } else {
-          Write-Host "❌ SDCC 未安装" -ForegroundColor Red
+          Write-Host "[FAIL] SDCC not found" -ForegroundColor Red
         }
         
         # Gradle
         if (Get-Command gradle -ErrorAction SilentlyContinue) {
           $gradleVer = gradle --version 2>&1 | Select-Object -First 1
-          Write-Host "✅ Gradle: $gradleVer" -ForegroundColor Green
+          Write-Host "[OK] Gradle: $gradleVer" -ForegroundColor Green
         } else {
-          Write-Host "⚠️ Gradle (使用 Wrapper)" -ForegroundColor Yellow
+          Write-Host "[INFO] Gradle (using Wrapper)" -ForegroundColor Yellow
         }
       shell: powershell
       
-    # ==================== 构建 Android APK ====================
-    - name: 构建 Android APK
+    # ==================== Build Android APK ====================
+    - name: Build Android APK
       run: |
-        Write-Host "`n[2] 构建 Android APK..." -ForegroundColor Yellow
+        Write-Host "`n[2] Building Android APK..." -ForegroundColor Yellow
         
         Set-Location android_app
         .\gradlew.bat assembleDebug --no-daemon
         
         if ($LASTEXITCODE -eq 0) {
-          Write-Host "✅ Android APK 构建成功" -ForegroundColor Green
+          Write-Host "[OK] Android APK built successfully" -ForegroundColor Green
         } else {
-          Write-Host "❌ Android APK 构建失败" -ForegroundColor Red
+          Write-Host "[FAIL] Android APK build failed" -ForegroundColor Red
           exit 1
         }
       shell: powershell
       
-    - name: 查找 APK 文件
+    - name: Find APK file
       id: find-apk
       run: |
         $apk = Get-ChildItem -Path "android_app/app/build/outputs/apk/debug" -Filter "*.apk" | Select-Object -First 1
         if ($apk) {
-          Write-Host "✅ APK: $($apk.Name) ($([math]::Round($apk.Length/1MB, 2)) MB)" -ForegroundColor Green
+          Write-Host "[OK] APK: $($apk.Name) ($([math]::Round($apk.Length/1MB, 2)) MB)" -ForegroundColor Green
           Write-Host "apk_path=$($apk.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
         }
       shell: powershell
       
-    # ==================== 构建 ESP8266 固件 ====================
-    - name: 构建 ESP8266 固件
+    # ==================== Build ESP8266 Firmware ====================
+    - name: Build ESP8266 firmware
       run: |
-        Write-Host "`n[3] 构建 ESP8266 固件..." -ForegroundColor Yellow
+        Write-Host "`n[3] Building ESP8266 firmware..." -ForegroundColor Yellow
         
         Set-Location esp8266_master
         pio run -e nodemcuv2
         
         if ($LASTEXITCODE -eq 0) {
-          Write-Host "✅ ESP8266 固件构建成功" -ForegroundColor Green
+          Write-Host "[OK] ESP8266 firmware built successfully" -ForegroundColor Green
         } else {
-          Write-Host "❌ ESP8266 固件构建失败" -ForegroundColor Red
+          Write-Host "[FAIL] ESP8266 firmware build failed" -ForegroundColor Red
           exit 1
         }
       shell: powershell
       
-    - name: 查找 ESP8266 固件
+    - name: Find ESP8266 firmware
       id: find-esp
       run: |
         $bin = Get-ChildItem -Path "esp8266_master/.pio/build/nodemcuv2" -Filter "firmware.bin" | Select-Object -First 1
         if ($bin) {
-          Write-Host "✅ ESP8266: $($bin.Name) ($([math]::Round($bin.Length/1KB, 2)) KB)" -ForegroundColor Green
+          Write-Host "[OK] ESP8266: $($bin.Name) ($([math]::Round($bin.Length/1KB, 2)) KB)" -ForegroundColor Green
           Write-Host "esp_path=$($bin.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
         }
       shell: powershell
       
-    # ==================== 构建 STC8G 固件 ====================
-    - name: 构建 STC8G 固件
+    # ==================== Build STC8G Firmware ====================
+    - name: Build STC8G firmware
       run: |
-        Write-Host "`n[4] 构建 STC8G 固件..." -ForegroundColor Yellow
+        Write-Host "`n[4] Building STC8G firmware..." -ForegroundColor Yellow
         
-        # 创建输出目录
+        # Create output directories
         New-Item -ItemType Directory -Force -Path "slave_node_stc8g/output" | Out-Null
         New-Item -ItemType Directory -Force -Path "slave_node_stc8g/build" | Out-Null
         
         Set-Location slave_node_stc8g
         
-        # 编译
+        # Compile
         sdcc -mmcs51 --model-small --opt-code-size --no-xinit-opt --int-long-reent --float-reent --std-sdcc99 --all-callee-saves -Iinc -c src/main.c -o build/main.rel 2>$null
         sdcc -mmcs51 --model-small --opt-code-size --no-xinit-opt --int-long-reent --float-reent --std-sdcc99 --all-callee-saves -Iinc -c src/pan3031.c -o build/pan3031.rel 2>$null
         sdcc -mmcs51 --model-small --opt-code-size --no-xinit-opt --int-long-reent --float-reent --std-sdcc99 --all-callee-saves -Iinc -c src/sc09b.c -o build/sc09b.rel 2>$null
         
-        # 链接
+        # Link
         sdcc -mmcs51 --model-small --opt-code-size --no-xinit-opt --int-long-reent --float-reent --std-sdcc99 --all-callee-saves build/main.rel build/pan3031.rel build/sc09b.rel -o output/water_slave_stc8g.ihx 2>$null
         
-        # 生成 HEX
+        # Generate HEX
         & "C:\Program Files\SDCC\bin\packihx.exe" output/water_slave_stc8g.ihx > output/water_slave_stc8g.hex
         
-        # 生成 BIN
+        # Generate BIN
         & "C:\Program Files\SDCC\bin\sdobjcopy.exe" -I ihex -O binary output/water_slave_stc8g.ihx output/water_slave_stc8g.bin 2>$null
         
-        Write-Host "✅ STC8G 固件构建成功" -ForegroundColor Green
+        Write-Host "[OK] STC8G firmware built successfully" -ForegroundColor Green
       shell: powershell
       
-    - name: 查找 STC8G 固件
+    - name: Find STC8G firmware
       id: find-stc
       run: |
         $bin = Get-ChildItem -Path "slave_node_stc8g/output" -Filter "*.bin" | Select-Object -First 1
         $hex = Get-ChildItem -Path "slave_node_stc8g/output" -Filter "*.hex" | Select-Object -First 1
         if ($bin -and $hex) {
-          Write-Host "✅ STC8G BIN: $($bin.Name) ($([math]::Round($bin.Length/1KB, 2)) KB)" -ForegroundColor Green
-          Write-Host "✅ STC8G HEX: $($hex.Name) ($([math]::Round($hex.Length/1KB, 2)) KB)" -ForegroundColor Green
+          Write-Host "[OK] STC8G BIN: $($bin.Name) ($([math]::Round($bin.Length/1KB, 2)) KB)" -ForegroundColor Green
+          Write-Host "[OK] STC8G HEX: $($hex.Name) ($([math]::Round($hex.Length/1KB, 2)) KB)" -ForegroundColor Green
           Write-Host "stc_path=$($bin.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
         }
       shell: powershell
       
-    # ==================== 上传所有产物 ====================
-    - name: 上传 Android APK
+    # ==================== Upload artifacts ====================
+    - name: Upload Android APK
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
         path: ${{ steps.find-apk.outputs.apk_path }}
         retention-days: 30
         
-    - name: 上传 ESP8266 固件
+    - name: Upload ESP8266 firmware
       uses: actions/upload-artifact@v4
       with:
         name: esp8266-firmware
         path: ${{ steps.find-esp.outputs.esp_path }}
         retention-days: 30
         
-    - name: 上传 STC8G 固件
+    - name: Upload STC8G firmware
       uses: actions/upload-artifact@v4
       with:
         name: stc8g-firmware
         path: ${{ steps.find-stc.outputs.stc_path }}
         retention-days: 30
         
-    # ==================== 构建总结 ====================
-    - name: 构建总结
+    # ==================== Build summary ====================
+    - name: Build summary
       run: |
         Write-Host "`n======================================" -ForegroundColor Cyan
-        Write-Host "  🎉 全部构建完成！" -ForegroundColor Cyan
+        Write-Host "  [SUCCESS] All builds completed!" -ForegroundColor Cyan
         Write-Host "======================================" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "构建产物:" -ForegroundColor Yellow
-        Write-Host "  📱 Android APK: ${{ steps.find-apk.outputs.apk_path }}" -ForegroundColor Green
-        Write-Host "  📡 ESP8266:    ${{ steps.find-esp.outputs.esp_path }}" -ForegroundColor Green
-        Write-Host "  🔌 STC8G:      ${{ steps.find-stc.outputs.stc_path }}" -ForegroundColor Green
+        Write-Host "Artifacts:" -ForegroundColor Yellow
+        Write-Host "  [APP] Android APK: ${{ steps.find-apk.outputs.apk_path }}" -ForegroundColor Green
+        Write-Host "  [FW] ESP8266:    ${{ steps.find-esp.outputs.esp_path }}" -ForegroundColor Green
+        Write-Host "  [FW] STC8G:      ${{ steps.find-stc.outputs.stc_path }}" -ForegroundColor Green
         Write-Host ""
         Write-Host "======================================" -ForegroundColor Cyan
       shell: powershell
