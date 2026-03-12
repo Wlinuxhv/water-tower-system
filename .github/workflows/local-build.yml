@@ -89,19 +89,16 @@ jobs:
     # ==================== Build Android APK ====================
     - name: Setup Android SDK
       run: |
-        # Add tools to PATH
-        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
-        
-        # Create local.properties with SDK path
         $sdkPath = "C:\Users\User\AppData\Local\Android\Sdk"
-        Set-Location android_app
-        "sdk.dir=$sdkPath" | Out-File -FilePath "local.properties" -Encoding utf8
-        Write-Host "[OK] Android SDK configured: $sdkPath"
-        Write-Host "Content:" (Get-Content local.properties)
+        "sdk.dir=$sdkPath" | Out-File -FilePath "android_app\local.properties" -Encoding ASCII
+        Get-Content "android_app\local.properties"
       shell: powershell
       
     - name: Build Android APK
-      run: cmd /c "set ANDROID_HOME=C:\Users\User\AppData\Local\Android\Sdk && set ANDROID_SDK_ROOT=C:\Users\User\AppData\Local\Android\Sdk && cd android_app && gradlew.bat assembleDebug --no-daemon"
+      run: |
+        Set-Location android_app
+        & ".\gradlew.bat" assembleDebug --no-daemon
+      shell: powershell
       
     - name: Find APK file
       id: find-apk
