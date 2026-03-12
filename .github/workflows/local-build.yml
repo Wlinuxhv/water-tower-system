@@ -34,8 +34,11 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
-        submodules: ''
-        persist-credentials: false
+        submodules: false
+        sparse-checkout: |
+          *
+          !water_tower_pcb/android_app
+        sparse-checkout-cone-mode: false
         
     - name: Show build environment
       run: |
