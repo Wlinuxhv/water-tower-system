@@ -84,6 +84,15 @@ jobs:
       shell: powershell
       
     # ==================== Build Android APK ====================
+    - name: Setup Android SDK
+      run: |
+        # Create local.properties with SDK path
+        $sdkPath = "C:\Users\User\AppData\Local\Android\Sdk"
+        Set-Location android_app
+        "sdk.dir=$sdkPath" | Out-File -FilePath "local.properties" -Encoding utf8
+        Write-Host "[OK] Android SDK configured: $sdkPath"
+      shell: powershell
+      
     - name: Build Android APK
       run: |
         Write-Host "`n[2] Building Android APK..." -ForegroundColor Yellow
