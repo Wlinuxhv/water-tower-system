@@ -21,9 +21,17 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         
         // 初始化 RecyclerView
-        towerAdapter = TowerAdapter(towers)
-        binding.recyclerViewTowers.layoutManager = LinearLayoutManager(this)
-        binding.recyclerViewTowers.adapter = towerAdapter
+        towerAdapter = TowerAdapter(
+            towers,
+            onPumpToggle = { tower ->
+                Toast.makeText(this, "切换水泵：${tower.name}", Toast.LENGTH_SHORT).show()
+            },
+            onTowerClick = { tower ->
+                Toast.makeText(this, "点击：${tower.name}", Toast.LENGTH_SHORT).show()
+            }
+        )
+        binding.towerRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.towerRecyclerView.adapter = towerAdapter
         
         // 加载演示数据
         loadDemoData()
