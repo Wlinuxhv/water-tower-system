@@ -23,7 +23,6 @@ jobs:
       JAVA_HOME: C:\Program Files\Java\jdk-17.0.2
       ANDROID_HOME: C:\Users\User\AppData\Local\Android\Sdk
       ANDROID_SDK_ROOT: C:\Users\User\AppData\Local\Android\Sdk
-      PATH: C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;%(PATH)
     
     steps:
     - name: Checkout code
@@ -35,11 +34,16 @@ jobs:
         
     - name: Show build environment
       run: |
+        # Add tools to PATH
+        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        
         Write-Host "======================================" -ForegroundColor Cyan
         Write-Host "  Water Tower Monitor - Local Build" -ForegroundColor Cyan
         Write-Host "======================================" -ForegroundColor Cyan
         Write-Host "Runner: $env:RUNNER_NAME"
         Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+        Write-Host "JAVA_HOME: $env:JAVA_HOME"
+        Write-Host "ANDROID_HOME: $env:ANDROID_HOME"
         Write-Host "Time: $(Get-Date)"
         Write-Host "======================================" -ForegroundColor Cyan
       shell: powershell
@@ -85,6 +89,9 @@ jobs:
     # ==================== Build Android APK ====================
     - name: Setup Android SDK
       run: |
+        # Add tools to PATH
+        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        
         # Create local.properties with SDK path
         $sdkPath = "C:\Users\User\AppData\Local\Android\Sdk"
         Set-Location android_app
@@ -94,6 +101,9 @@ jobs:
       
     - name: Build Android APK
       run: |
+        # Add tools to PATH
+        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        
         Write-Host "`n[2] Building Android APK..." -ForegroundColor Yellow
         
         Set-Location android_app
@@ -120,6 +130,9 @@ jobs:
     # ==================== Build ESP8266 Firmware ====================
     - name: Build ESP8266 firmware
       run: |
+        # Add tools to PATH
+        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        
         Write-Host "`n[3] Building ESP8266 firmware..." -ForegroundColor Yellow
         
         Set-Location esp8266_master
@@ -146,6 +159,9 @@ jobs:
     # ==================== Build STC8G Firmware ====================
     - name: Build STC8G firmware
       run: |
+        # Add tools to PATH
+        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
+        
         Write-Host "`n[4] Building STC8G firmware..." -ForegroundColor Yellow
         
         # Create output directories
