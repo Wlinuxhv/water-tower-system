@@ -2,17 +2,22 @@ name: Local Build - All Firmwares
 
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.github/workflows/runner-*.yml'
-  pull_request:
-    branches: [master]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
+    inputs:
+      build_android:
+        description: 'Build Android APK'
+        required: false
+        default: 'true'
+        type: boolean
+      build_esp8266:
+        description: 'Build ESP8266'
+        required: false
+        default: 'true'
+        type: boolean
+      build_stc8g:
+        description: 'Build STC8G'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   build-all:
