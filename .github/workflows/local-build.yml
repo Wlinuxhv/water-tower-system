@@ -101,29 +101,7 @@ jobs:
       shell: powershell
       
     - name: Build Android APK
-      run: |
-        # Add tools to PATH
-        $env:PATH = "C:\Program Files\Java\jdk-17.0.2\bin;C:\Users\User\AppData\Local\Android\Sdk\platform-tools;C:\Users\User\AppData\Local\Android\Sdk\tools;C:\Program Files\SDCC\bin;C:\Users\User\.local\bin;" + $env:PATH
-        $env:ANDROID_HOME = "C:\Users\User\AppData\Local\Android\Sdk"
-        $env:ANDROID_SDK_ROOT = "C:\Users\User\AppData\Local\Android\Sdk"
-        
-        Write-Host "`n[2] Building Android APK..." -ForegroundColor Yellow
-        
-        Set-Location android_app
-        
-        # Debug: show SDK path
-        Write-Host "SDK path: $env:ANDROID_HOME"
-        Write-Host "local.properties:" (Get-Content local.properties)
-        
-        .\gradlew.bat assembleDebug --no-daemon
-        
-        if ($LASTEXITCODE -eq 0) {
-          Write-Host "[OK] Android APK built successfully" -ForegroundColor Green
-        } else {
-          Write-Host "[FAIL] Android APK build failed" -ForegroundColor Red
-          exit 1
-        }
-      shell: powershell
+      run: cmd /c "set ANDROID_HOME=C:\Users\User\AppData\Local\Android\Sdk && set ANDROID_SDK_ROOT=C:\Users\User\AppData\Local\Android\Sdk && cd android_app && gradlew.bat assembleDebug --no-daemon"
       
     - name: Find APK file
       id: find-apk
