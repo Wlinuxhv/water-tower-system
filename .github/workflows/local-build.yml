@@ -4,8 +4,15 @@ on:
   workflow_dispatch:
   push:
     branches: [master]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.github/workflows/runner-*.yml'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
 
 jobs:
   build-all:
@@ -20,17 +27,12 @@ jobs:
       PIO_PATH: C:\Users\User\.local\bin
     
     steps:
-    - name: Clean git safe directory
-      run: |
-        git config --global --add safe.directory "*"
-        git config --global --unset-all submodule.water_tower_pcb/android_app.url 2>$null
-      shell: powershell
-        
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: false
         fetch-depth: 1
+        clean: true
         
     - name: Show build environment
       run: |
