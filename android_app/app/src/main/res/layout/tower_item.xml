@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/towerCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp"
+    android:layout_marginVertical="6dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,29 +19,58 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- 顶部：名称和状态 -->
+        <!-- 顶部：图标、名称和状态 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/cardName"
+            <!-- 水塔图标 -->
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/circle_icon_bg"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_compass"
+                android:tint="@color/primary"
+                android:contentDescription="Tower" />
+
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:text="1 号水塔"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/cardName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1 号水塔"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textUpdate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="更新：12:30:45"
+                    android:textColor="@color/text_hint"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/textStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="● 在线"
-                android:textColor="@color/success"
-                android:textSize="14sp" />
+                android:background="@drawable/status_badge_bg"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:text="在线"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <!-- 报警信息 -->
@@ -48,17 +78,20 @@
             android:id="@+id/textAlarm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/alarm_badge_bg"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
             android:text="⚠️ 缺水报警"
-            android:textColor="@color/error"
-            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
             android:visibility="gone" />
 
-        <!-- 水位进度条 -->
+        <!-- 水位进度条区域 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -69,53 +102,54 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
-            <ProgressBar
-                android:id="@+id/progressLevel"
-                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            <!-- 自定义水位进度条 -->
+            <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:layout_weight="1"
-                android:max="100"
-                android:progress="50" />
+                android:layout_height="12dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_weight="1">
+
+                <ProgressBar
+                    android:id="@+id/progressLevel"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:max="100"
+                    android:progress="50"
+                    android:progressDrawable="@drawable/water_progress_bg" />
+
+                <View
+                    android:id="@+id/progressBackground"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/water_progress_bg" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/textLevel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minWidth="48dp"
                 android:text="50%"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textColor="@color/primary"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:minWidth="40dp"
                 android:gravity="end" />
         </LinearLayout>
 
-        <!-- 底部：更新时间和水泵按钮 -->
-        <LinearLayout
+        <!-- 底部：水泵控制按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPump"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="44dp"
             android:layout_marginTop="12dp"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/textUpdate"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="更新：12:30:45"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnPump"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@color/success"
-                android:minWidth="100dp"
-                android:text="开启水泵"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
-        </LinearLayout>
+            android:text="开启水泵"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/button_pump_on"
+            app:cornerRadius="22dp"
+            app:icon="@android:drawable/ic_media_play"
+            app:iconGravity="textStart"
+            app:iconTint="@android:color/white" />
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>
