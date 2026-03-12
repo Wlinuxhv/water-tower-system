@@ -33,9 +33,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        submodules: false
         fetch-depth: 1
-        clean: true
+        submodules: ''
+        persist-credentials: false
         
     - name: Show build environment
       run: |
